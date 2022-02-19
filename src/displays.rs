@@ -158,7 +158,7 @@ where
         .draw(display)?;
 
     Text::new(
-        &t,
+        t,
         Point::new(10, (display.bounding_box().size.height - 10) as i32 / 2),
         MonoTextStyle::new(&FONT_10X20, Rgb565::WHITE.into()),
     )

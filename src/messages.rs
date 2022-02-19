@@ -7,7 +7,7 @@ use crate::mqtt;
 pub enum Message {
     MqttConnect,
     MqttDisconnect,
-    MqttMessage(String, String, mqtt::Label),
+    MqttReceived(String, String, mqtt::Label),
     ButtonPress(u32),
     ButtonRelease(u32),
 }

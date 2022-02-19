@@ -33,7 +33,7 @@ pub struct Mqtt {
 enum MqttCommand {
     MqttConnect,
     MqttDisconnect,
-    MqttMessage(String, String),
+    MqttReceived(String, String),
     Subscribe(String, Label),
     Publish(String, bool, String),
 }
@@ -49,7 +49,7 @@ fn get_client(url: &str, tx: mpsc::Sender<MqttCommand>) -> Result<EspMqttClient,
                 let topic = msg.topic(&token).to_string();
                 let raw = msg.data();
                 let data = std::str::from_utf8(&raw).unwrap();
-                tx.send(MqttCommand::MqttMessage(topic, data.to_string()))
+                tx.send(MqttCommand::MqttReceived(topic, data.to_string()))
                     .unwrap();
             }
             Ok(Event::Connected(_)) => {
@@ -105,27 +105,24 @@ impl Mqtt {
                             .unwrap();
                     }
 
-                    MqttCommand::MqttMessage(topic, data) => {
+                    MqttCommand::MqttReceived(topic, data) => {
                         info!("got MqttMessage");
-                        match subscriptions.get(&topic) {
-                            Some(list) => {
-                                for s in list {
-                                    tx_to_client
-                                        .send(messages::Message::MqttMessage(
-                                            topic.clone(),
-                                            data.to_string(),
-                                            s.label.clone(),
-                                        ))
-                                        .unwrap();
-                                }
+                        if let Some(list) = subscriptions.get(&topic) {
+                            for s in list {
+                                tx_to_client
+                                    .send(messages::Message::MqttReceived(
+                                        topic.clone(),
+                                        data.to_string(),
+                                        s.label.clone(),
+                                    ))
+                                    .unwrap();
                             }
-                            None => {}
                         }
                     }
 
                     MqttCommand::Subscribe(topic, label) => {
                         info!("got Subscribe");
-                        let subscription = Subscription { label: label };
+                        let subscription = Subscription { label };
 
                         match subscriptions.get_mut(&topic) {
                             Some(list) => list.push(subscription),

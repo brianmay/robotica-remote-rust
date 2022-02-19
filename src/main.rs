@@ -90,11 +90,7 @@ fn initialize() -> Result<Box<EspWifi>> {
     let sys_loop_stack = Arc::new(EspSysLoopStack::new()?);
     let default_nvs = Arc::new(EspDefaultNvs::new()?);
 
-    let wifi = wifi(
-        netif_stack.clone(),
-        sys_loop_stack.clone(),
-        default_nvs.clone(),
-    )?;
+    let wifi = wifi(netif_stack, sys_loop_stack, default_nvs)?;
 
     Ok(wifi)
 }
@@ -114,7 +110,7 @@ fn configure_button<T: 'static + InputPin<Error = EspError> + Send>(
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let result = panic::catch_unwind(|| main_inner());
+    let result = panic::catch_unwind(main_inner);
 
     match result {
         Ok(rc) => match rc {
@@ -163,7 +159,7 @@ fn main_inner() -> Result<(), Box<dyn Error>> {
 
     for received in rx {
         match received {
-            messages::Message::MqttMessage(topic, data, label) => {
+            messages::Message::MqttReceived(topic, data, label) => {
                 info!("got message {} {}", topic, data);
                 let id = label.component_id;
                 let sid = label.subscription_id;

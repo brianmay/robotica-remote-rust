@@ -9,7 +9,7 @@ pub struct LightConfig {
 
 impl Config for LightConfig {
     fn create_controller(&self) -> Box<dyn Controller> {
-        Box::new(LightController::new(&self))
+        Box::new(LightController::new(self))
     }
 }
 
@@ -124,17 +124,16 @@ impl Controller for LightController {
             Action::TurnOff => message["action"] = serde_json::json!("turn_off"),
             Action::Toggle => {
                 let display_state = self.get_display_state();
-                match display_state {
-                    DisplayState::On => message["action"] = serde_json::json!("turn_off"),
-                    _ => {}
-                }
+                if let DisplayState::On = display_state {
+                    message["action"] = serde_json::json!("turn_off");
+                };
             }
         };
 
         let command = Command {
             location: self.config.c.location.clone(),
             device: self.config.c.device.clone(),
-            message: message,
+            message,
         };
 
         vec![command]
@@ -159,7 +158,7 @@ fn get_display_state_turn_on(lb: &LightController) -> DisplayState {
         Some("OFF") if scenes_empty => DisplayState::Off,
         _ => match scenes {
             None => DisplayState::Unknown,
-            Some(scenes) if scenes.contains(&scene) => DisplayState::On,
+            Some(scenes) if scenes.contains(scene) => DisplayState::On,
             Some(scenes) if scenes.contains(&"auto".to_string()) => DisplayState::Auto,
             Some(scenes) if scenes.contains(&"rainbow".to_string()) => DisplayState::Rainbow,
             Some(_) => DisplayState::Off,
@@ -210,7 +209,7 @@ fn get_display_state_toggle(lb: &LightController) -> DisplayState {
         Some("OFF") if scenes_empty => DisplayState::Off,
         _ => match scenes {
             None => DisplayState::Unknown,
-            Some(scenes) if scenes.contains(&scene) => DisplayState::On,
+            Some(scenes) if scenes.contains(scene) => DisplayState::On,
             Some(scenes) if scenes.contains(&"auto".to_string()) => DisplayState::Auto,
             Some(scenes) if scenes.contains(&"rainbow".to_string()) => DisplayState::Rainbow,
             Some(_) => DisplayState::Off,
