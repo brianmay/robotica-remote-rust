@@ -10,8 +10,6 @@ Todo:
 
 * Revise error handling. Anything unexpected will panic with limited debug
   information.
-* When MQTT connection goes down, it stops working. Probably need to
-  resubscribe to topics whenever connection is established.
 * Only one button controller implemented, and is specific to Robotica lights.
 * Button config is hardcoded.
 * Fix dodgy code to get topic from mqtt message. See https://github.com/ivmarkov/rust-esp32-std-demo/issues/64

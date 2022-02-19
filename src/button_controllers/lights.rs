@@ -97,6 +97,12 @@ impl Controller for LightController {
         }
     }
 
+    fn process_disconnected(&mut self) {
+        self.power = None;
+        self.scenes = None;
+        self.priorities = None;
+    }
+
     fn get_display_state(&self) -> DisplayState {
         let action = &self.config.c.action;
 

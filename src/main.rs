@@ -198,6 +198,15 @@ fn main_inner() -> Result<(), Box<dyn Error>> {
                 let message = DisplayMessage::DisplayState(state, id);
                 displays.send(message)?;
             }
+            messages::Message::MqttConnect => {}
+            messages::Message::MqttDisconnect => {
+                for (id, controller) in controllers.iter_mut().enumerate() {
+                    controller.process_disconnected();
+                    let state = controller.get_display_state();
+                    let message = DisplayMessage::DisplayState(state, id as u32);
+                    displays.send(message)?;
+                }
+            }
             messages::Message::ButtonPress(id) => {
                 let controller = controllers.get_mut(id as usize).unwrap();
                 let commands = controller.get_press_commands();

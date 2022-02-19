@@ -71,6 +71,7 @@ pub struct CommonConfig {
 
 pub trait Controller {
     fn get_subscriptions(&self) -> Vec<Subscription>;
+    fn process_disconnected(&mut self);
     fn process_message(&mut self, label: Label, data: String);
     fn get_display_state(&self) -> DisplayState;
     fn get_press_commands(&self) -> Vec<Command>;
