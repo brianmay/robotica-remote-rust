@@ -1,23 +1,28 @@
-# Rust on ESP32 STD demo app
+# Robotica Remote Rust
 
-A demo STD binary crate for the ESP32[XX] and ESP-IDF, which connects to WiFi, Ethernet, drives a small HTTP server and draws on a LED screen.
-
-![CI](https://github.com/ivmarkov/rust-esp32-std-demo/actions/workflows/ci.yml/badge.svg)
+Copied and adapted from https://github.com/ivmarkov/rust-esp32-std-hello.
 
 Highlights:
 
-- **Pure Rust and pure Cargo build!** No CMake, no PlatformIO, no C helpers
-  - ... via [esp-idf-sys](https://crates.io/crates/esp-idf-sys) and [embuild](https://crates.io/crates/embuild)
-- **Support for Rust STD** (threads, console, TCP/IP) safe APIs
-  - ... upstreamed and [part of the Rust STD library](https://github.com/rust-lang/rust/pull/87666)
-- **New, experimental!** Support for asynchronous networking using [smol](https://github.com/smol-rs/smol)
-- **New, experimental!** Support for running in the [Espressif fork of QEMU](https://github.com/espressif/qemu/wiki)
-- Rust Safe APIs for various ESP-IDF services like WiFi, Ping, Httpd and logging
-  - ... via [esp-idf-svc](https://crates.io/crates/esp-idf-svc) ([embedded-svc](https://crates.io/crates/embedded-svc) abstractions implemented on top of ESP-IDF)
-- NAPT support (Router from the SoftAP to the STA interface). **NOTE**: In production, do NOT leave the SoftAP interface open (without password)!
-- Driving a LED screen with the [embedded-graphics](https://crates.io/crates/embedded-graphics) Rust crate
-  - ... via [esp-idf-hal](https://crates.io/crates/esp-idf-hal) ([embedded-hal](https://crates.io/crates/embedded-hal) drivers implemented on top of ESP-IDF)
-- (ESP32-S2 only) [Blink a LED](https://github.com/ivmarkov/rust-esp32-ulp-blink) by loading a pure Rust program onto the RiscV Ultra Low Power CPU
+* Pure Rust implementation.
+
+Todo:
+
+* Revise error handling. Anything unexpected will panic with limited debug
+  information.
+* When MQTT connection goes down, it stops working. Probably need to
+  resubscribe to topics whenever connection is established.
+* Only one button controller implemented, and is specific to Robotica lights.
+* Button config is hardcoded.
+* Fix dodgy code to get topic from mqtt message. See https://github.com/ivmarkov/rust-esp32-std-demo/issues/64
+
+Assumptions:
+
+* Use with this board: http://www.openhardwareconf.org/wiki/SwagBadge2021
+* gpio16: 1st button, pulled high, action low.
+* gpio16: 2nd button, pulled high, action low.
+* 2 ssd1306 compatable displays on i2c, scl gpio4, sda gpio5, addr 0x3C and 0x3D.
+* slider controls not yet used.
 
 ## Build
 
@@ -33,29 +38,11 @@ Highlights:
 - Clone this repo: `git clone https://github.com/ivmarkov/rust-esp32-std-demo`
 - Enter it: `cd rust-esp32-std-demo`
 - Export two environment variables that would contain the SSID & password of your wireless network:
-  - `export RUST_ESP32_STD_DEMO_WIFI_SSID=<ssid>`
-  - `export RUST_ESP32_STD_DEMO_WIFI_PASS=<ssid>`
+  - `export WIFI_SSID=<ssid>`
+  - `export WIFI_PASS=<ssid>`
+  -  export MQTT_URL=mqtt://username:password@example.org:1883
 - To configure the demo for your particular board, please uncomment the relevant [Rust target for your board](https://github.com/ivmarkov/rust-esp32-std-demo/blob/main/.cargo/config.toml#L2) and comment the others. Alternatively, just append the `--target <target>` flag to all `cargo build` lines below.
 - Build: `cargo build` or `cargo build --release`
-  - If you would like to see the async networking in action, use the following build command instead: `export ESP_IDF_VERSION=master; cargo build --features native`
-  - (Only if you happen to have a [TTGO T-Display board](http://www.lilygo.cn/prod_view.aspx?TypeId=50033&Id=1126&FId=t3:50033:3)): Add `ttgo` to the `--features` build flags above (as in `cargo build --features ttgo`) to be greeted with a `Hello Rust!` message on the board's LED screen
-  - (Only if you happen to have a [Waveshare board](https://www.waveshare.com/wiki/E-Paper_ESP32_Driver_Board) and a [waveshare 4.2" e-paper screen](https://www.waveshare.com/wiki/4.2inch_e-Paper_Module)): Add `waveshare_epd` to the `--features` build flags above (as in `cargo build --features waveshare_epd`) to be greeted with a `Hello Rust!` message on the e-paper screen
-  - (Only if you happen to have an [ESP32-S2-Kaluga-1 board](https://docs.espressif.com/projects/esp-idf/en/latest/esp32s2/hw-reference/esp32s2/user-guide-esp32-s2-kaluga-1-kit.html)): Add `kaluga` to the `--features` build flags above (as in `cargo build --features kaluga`) to be greeted with a `Hello Rust!` message on the board's LED screen
-  - (Only if you happen to have a [Heltec LoRa 32 board](https://heltec.org/project/wifi-lora-32/)): Add `heltec` to the `--features` build flags above (as in `cargo build --features heltec`) to be greeted with a `Hello Rust!` message on the board's LED screen
-  - (Only if you happen to have an [ESP32-S3-USB-OTG](https://www.espressif.com/en/products/devkits)): Build with `native` and the ESP-IDF master branch and add `esp32s3_usb_otg` to the `--features` build flags above (as in `export ESP_IDF_VERSION=master; cargo build --features native,esp32s3_usb_otg`) to be greeted with a `Hello Rust!` message on the board's LED screen
-  - (Only if you happen to have an [Ethernet-to-SPI board based on the W5500 chip](https://www.wiznet.io/product-item/w5500/)): Build with `native` and the ESP-IDF master branch and add `w5500` to the `--features` build flags above (as in `export ESP_IDF_VERSION=master; cargo build --features native,w5500`) to have Ethernet connectivity as part of the demo
-    - Note that other Ethernet-to-SPI boards might work just fine as well, but you'll have to change the chip from `SpiEthDriver::W5500` to whatever chip your SPI board is using, in the demo code itself.
-  - (Only if you happen to have an [ESP32 board with an onboard IP101 LAN chip and/or a stock ESP32 board connected to an IP101 Ethernet board via RMII](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/hw-reference/esp32/get-started-ethernet-kit.html)): Build with `native` and the ESP-IDF master branch and add `ip101` to the `--features` build flags above (as in `export ESP_IDF_VERSION=master; cargo build --features native,ip101`) to have Ethernet connectivity as part of the demo
-    - Note that other RMII Ethernet boards might work just fine as well, but you'll have to change the chip from `RmiiEthDriver::IP101` to whatever chip your board is using, in the demo code itself.
-- (Only if you happen to have an ESP32-S2 board and can connect a LED to GPIO Pin 04 and GND): Try accessing `http://<dhcp-ip-of-the-board>>/ulp` once build is flashed on the MCU
-
-## QEMU (WIP, experimental)
-- Rather than flashing on the chip, you can now run the demo in QEMU:
-  - Clone and then build [the Espressif fork of QEMU](https://github.com/espressif/qemu) by following the [build instructions](https://github.com/espressif/qemu/wiki)
-  - Install the [esptool.py](https://github.com/espressif/esptool) utility
-  - Build the app with `export ESP_IDF_VERSION=master; cargo build --features native,qemu`
-  - NOTE: Only ESP32 is supported for the moment, so make sure that the `xtensa-esp32-espidf` target (the default one) is active in your `.cargo/config.toml` file (or override with `export ESP_IDF_VERSION=master; cargo build --features native,qemu --target xtensa-esp32-espidf`)
-  - Run it in QEMU by typing `./qemu.sh`. NOTE: You might have to change the `ESP_QEMU_PATH` in that script to point to the `build` subdirectory of your QEMU Espressif clone
 
 ## Flash
 
