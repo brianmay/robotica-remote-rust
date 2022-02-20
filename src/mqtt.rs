@@ -4,7 +4,8 @@ use std::thread;
 
 use anyhow::Error;
 
-use embedded_svc::mqtt::client::{Client, Event, Message, Publish, QoS, TopicToken};
+use embedded_svc::mqtt::client::{Client, Details, Event, Message, Publish, QoS, TopicToken};
+
 use esp_idf_hal::ledc::Resolution;
 use esp_idf_svc::mqtt::client::{
     EspMqttClient, EspMqttConnection, EspMqttMessage, MqttClientConfiguration,
@@ -47,14 +48,17 @@ fn get_client(url: &str, tx: mpsc::Sender<MqttCommand>) -> Result<EspMqttClient,
         let event_or_error = msg.unwrap();
         match event_or_error {
             Err(e) => info!("MQTT Message ERROR: {}", e),
-            Ok(Event::Received(msg)) => {
-                let token = unsafe { TopicToken::new() };
-                let topic = msg.topic(&token).to_string();
-                let raw = msg.data();
-                let data = std::str::from_utf8(&raw).unwrap();
-                tx.send(MqttCommand::MqttReceived(topic, data.to_string()))
-                    .unwrap();
-            }
+            Ok(Event::Received(msg)) => match msg.details() {
+                Details::Complete(token) => {
+                    let topic = msg.topic(&token).to_string();
+                    let raw = msg.data();
+                    let data = std::str::from_utf8(&raw).unwrap();
+                    tx.send(MqttCommand::MqttReceived(topic, data.to_string()))
+                        .unwrap();
+                }
+                Details::InitialChunk(_) => error!("Got InitialChunk message"),
+                Details::SubsequentChunk(_) => error!("Got SubsequentChunk message"),
+            },
             Ok(Event::Connected(_)) => {
                 tx.send(MqttCommand::MqttConnect).unwrap();
             }
