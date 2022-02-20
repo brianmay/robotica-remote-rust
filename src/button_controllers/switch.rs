@@ -123,7 +123,7 @@ impl Controller for SwitchController {
     }
 
     fn get_icon(&self) -> Icon {
-        return self.config.c.icon.clone();
+        self.config.c.icon.clone()
     }
 }
 

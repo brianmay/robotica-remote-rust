@@ -140,7 +140,7 @@ impl Controller for LightController {
     }
 
     fn get_icon(&self) -> Icon {
-        return self.config.c.icon.clone();
+        self.config.c.icon.clone()
     }
 }
 
