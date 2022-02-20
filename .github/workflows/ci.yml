@@ -29,6 +29,6 @@ jobs:
       - name: Build | Fmt Check
         run: cargo fmt -- --check
       - name: Build | Clippy
-        run: cargo clippy --no-deps --target riscv32imc-esp-espidf -- -Dwarnings
+        run: WIFI_SSID=ssid WIFI_PASS=pass MQTT_URL=mqtt://example.org cargo clippy --no-deps --target riscv32imc-esp-espidf -- -Dwarnings
       - name: Build | Compile
         run: WIFI_SSID=ssid WIFI_PASS=pass MQTT_URL=mqtt://example.org cargo build --target riscv32imc-esp-espidf
