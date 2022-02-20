@@ -158,7 +158,7 @@ fn get_display_state_turn_on(lb: &LightController) -> DisplayState {
     match power {
         None => DisplayState::Unknown,
         Some("HARD_OFF") => DisplayState::HardOff,
-        Some("ON") if scenes_empty => DisplayState::On,
+        Some("ON") if scenes_empty => DisplayState::OnOther,
         Some("OFF") if scenes_empty => DisplayState::Off,
         _ => match scenes {
             None => DisplayState::Unknown,
@@ -208,7 +208,7 @@ fn get_display_state_toggle(lb: &LightController) -> DisplayState {
     match power {
         None => DisplayState::Unknown,
         Some("HARD_OFF") => DisplayState::HardOff,
-        Some("ON") if scenes_empty => DisplayState::On,
+        Some("ON") if scenes_empty => DisplayState::OnOther,
         Some("OFF") if scenes_empty => DisplayState::Off,
         _ => match scenes {
             None => DisplayState::Unknown,
