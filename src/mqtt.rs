@@ -50,7 +50,7 @@ fn get_client(url: &str, tx: mpsc::Sender<MqttCommand>) -> Result<EspMqttClient,
             Err(e) => info!("MQTT Message ERROR: {}", e),
             Ok(Event::Received(msg)) => match msg.details() {
                 Details::Complete(token) => {
-                    let topic = msg.topic(&token).to_string();
+                    let topic = msg.topic(token).to_string();
                     let raw = msg.data();
                     let data = std::str::from_utf8(&raw).unwrap();
                     tx.send(MqttCommand::MqttReceived(topic, data.to_string()))
