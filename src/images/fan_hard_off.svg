@@ -18,7 +18,7 @@
    inkscape:version="1.0.2 (e86c870879, 2021-01-15)"><metadata
    id="metadata55"><rdf:RDF><cc:Work
        rdf:about=""><dc:format>image/svg+xml</dc:format><dc:type
-         rdf:resource="http://purl.org/dc/dcmitype/StillImage" /><dc:title></dc:title></cc:Work></rdf:RDF></metadata><defs
+         rdf:resource="http://purl.org/dc/dcmitype/StillImage" /><dc:title /></cc:Work></rdf:RDF></metadata><defs
    id="defs53" /><sodipodi:namedview
    pagecolor="#ff00ff"
    bordercolor="#666666"
@@ -28,18 +28,19 @@
    guidetolerance="10"
    inkscape:pageopacity="0"
    inkscape:pageshadow="2"
-   inkscape:window-width="1914"
-   inkscape:window-height="508"
+   inkscape:window-width="3834"
+   inkscape:window-height="2107"
    id="namedview51"
    showgrid="false"
    inkscape:zoom="1.96875"
-   inkscape:cx="158.22222"
+   inkscape:cx="60.444442"
    inkscape:cy="134.09524"
    inkscape:window-x="3840"
-   inkscape:window-y="1088"
+   inkscape:window-y="22"
    inkscape:window-maximized="0"
    inkscape:current-layer="Layer_1"
-   inkscape:pagecheckerboard="false" />
+   inkscape:pagecheckerboard="false"
+   inkscape:document-rotation="0" />
 
 <g
    id="g12"
@@ -48,23 +49,13 @@
    id="g10"
    style="fill:#ffffff;fill-opacity:1">
 		<path
-   d="M434.421,178.421C434.421,80.033,354.377,0,256,0C157.612,0,77.579,80.033,77.579,178.421    c0,92.182,70.28,168.27,160.076,177.49v63.708h-5.545c-32.712,0-59.334,26.622-59.334,59.334V512H333.93v-33.047    c0-32.712-26.622-59.334-59.334-59.334h-5.547l0.001-63.258C361.357,349.663,434.421,272.414,434.421,178.421z M274.595,451.012    c15.404,0,27.94,12.537,27.94,27.94v1.653h-98.367v-1.653c0-15.404,12.537-27.94,27.94-27.94H274.595z M256,325.448    c-81.069,0-147.027-65.958-147.027-147.027S174.931,31.394,256,31.394s147.027,65.958,147.027,147.027    S337.069,325.448,256,325.448z"
+   d="M 434.421,178.421 C 434.421,80.033 354.377,0 256,0 157.612,0 77.579,80.033 77.579,178.421 c 0,92.182 70.28,168.27 160.076,177.49 v 63.708 h -5.545 c -32.712,0 -59.334,26.622 -59.334,59.334 V 512 H 333.93 v -33.047 c 0,-32.712 -26.622,-59.334 -59.334,-59.334 h -5.547 l 0.001,-63.258 c 92.307,-6.698 165.371,-83.947 165.371,-177.94 z"
    id="path8"
-   style="fill:#ffffff;fill-opacity:1" />
+   style="fill:#ffffff;fill-opacity:1"
+   sodipodi:nodetypes="sssccssccssccs" />
 	</g>
 </g>
-<g
-   id="g18">
-	<g
-   id="g16">
-		<rect
-   x="268.238"
-   y="459.384"
-   width="15.88"
-   height="15.88"
-   id="rect14" />
-	</g>
-</g>
+
 <g
    id="g20">
 </g>
