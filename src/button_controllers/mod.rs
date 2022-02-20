@@ -1,4 +1,5 @@
 pub mod lights;
+pub mod switch;
 
 use std::convert::TryFrom;
 use std::convert::TryInto;
@@ -7,8 +8,6 @@ use std::{collections::HashMap, ops::Sub};
 use epd_waveshare::graphics::Display;
 use ili9341::DisplaySize;
 use log::*;
-
-// use embedded_svc::mqtt::client::Message;
 
 use crate::button::Button;
 
@@ -51,8 +50,7 @@ pub enum DisplayState {
     Unknown,
     On,
     Off,
-    Auto,
-    Rainbow,
+    OnOther,
 }
 
 pub trait Config {
@@ -60,13 +58,17 @@ pub trait Config {
 }
 
 #[derive(Clone)]
+pub enum Icon {
+    Light,
+    Fan,
+}
+#[derive(Clone)]
 pub struct CommonConfig {
     pub name: String,
-    // id: String,
     pub location: String,
     pub device: String,
-    // button_type: String,
     pub action: Action,
+    pub icon: Icon,
 }
 
 pub trait Controller {
@@ -75,4 +77,5 @@ pub trait Controller {
     fn process_message(&mut self, label: Label, data: String);
     fn get_display_state(&self) -> DisplayState;
     fn get_press_commands(&self) -> Vec<Command>;
+    fn get_icon(&self) -> Icon;
 }

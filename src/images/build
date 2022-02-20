@@ -1,0 +1,22 @@
+#!/bin/sh
+set -ex
+
+cd src/images
+
+do_image() {
+    image="$1"
+    background="$2"
+    inkscape -w 64 -h 64 "$image.svg" --export-type="png" -o - | pngtopnm -mix -background "$background" | ppmtopgm | ppmtotga -mono > "$image"_64x64.tga
+}
+
+do_image light_off black
+do_image light_hard_off black
+do_image light_unknown black
+do_image light_on white
+do_image light_on_other black
+
+do_image fan_off black
+do_image fan_hard_off black
+do_image fan_unknown black
+do_image fan_on white
+do_image fan_on_other black

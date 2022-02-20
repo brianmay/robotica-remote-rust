@@ -1,7 +1,8 @@
 use std::collections::HashMap;
-use std::error::Error;
 use std::sync::mpsc;
 use std::thread;
+
+use anyhow::Error;
 
 use embedded_svc::mqtt::client::{Client, Event, Message, Publish, QoS, TopicToken};
 use esp_idf_hal::ledc::Resolution;
@@ -13,6 +14,8 @@ use esp_idf_sys::EspError;
 use log::*;
 
 use crate::messages;
+
+type Result<T, E = Error> = core::result::Result<T, E>;
 
 #[derive(Clone)]
 pub struct Label {
@@ -79,7 +82,7 @@ impl Mqtt {
         }
     }
 
-    pub fn connect(&mut self, tx_to_client: messages::Sender) -> Result<(), Box<dyn Error>> {
+    pub fn connect(&mut self, tx_to_client: messages::Sender) -> Result<()> {
         let url = self.url.clone();
         let (tx, rx) = mpsc::channel();
         self.tx = Some(tx.clone());
@@ -146,13 +149,13 @@ impl Mqtt {
         Ok(())
     }
 
-    pub fn subscribe(&self, topic: &str, label: Label) -> Result<(), Box<dyn Error>> {
+    pub fn subscribe(&self, topic: &str, label: Label) -> Result<()> {
         let tx = self.tx.clone().unwrap();
         tx.send(MqttCommand::Subscribe(topic.to_string(), label))?;
         Ok(())
     }
 
-    pub fn publish(&self, topic: &str, retain: bool, data: &str) -> Result<(), Box<dyn Error>> {
+    pub fn publish(&self, topic: &str, retain: bool, data: &str) -> Result<()> {
         let tx = self.tx.clone().unwrap();
         tx.send(MqttCommand::Publish(
             topic.to_string(),

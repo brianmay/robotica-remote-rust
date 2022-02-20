@@ -1,6 +1,7 @@
-use std::error::Error;
 use std::sync::mpsc;
 use std::thread;
+
+use anyhow::Error;
 
 use display_interface::DisplayError;
 use log::*;
@@ -17,23 +18,34 @@ use esp_idf_hal::i2c;
 use esp_idf_hal::prelude::*;
 use esp_idf_hal::spi;
 
+use embedded_graphics::geometry::Point;
+use embedded_graphics::image::*;
 use embedded_graphics::mono_font::{ascii::FONT_10X20, MonoTextStyle};
 use embedded_graphics::pixelcolor::*;
 use embedded_graphics::prelude::*;
 use embedded_graphics::primitives::*;
 use embedded_graphics::text::*;
 
+use tinytga::DynamicTga;
+
 use crate::button_controllers;
+use crate::button_controllers::DisplayState;
+
+type Result<T, E = Error> = core::result::Result<T, E>;
 
 pub enum DisplayMessage {
-    DisplayState(button_controllers::DisplayState, u32),
+    DisplayState(
+        button_controllers::DisplayState,
+        button_controllers::Icon,
+        u32,
+    ),
 }
 
 pub fn connect(
     i2c: i2c::I2C0,
     scl: gpio::Gpio4<gpio::Unknown>,
     sda: gpio::Gpio5<gpio::Unknown>,
-) -> Result<mpsc::Sender<DisplayMessage>, Box<dyn Error>> {
+) -> Result<mpsc::Sender<DisplayMessage>> {
     let (tx, rx) = mpsc::channel();
 
     let config = <i2c::config::MasterConfig as Default>::default().baudrate(400.kHz().into());
@@ -63,25 +75,18 @@ pub fn connect(
         )
         .into_buffered_graphics_mode();
 
-        let z = AnyError::<display_interface::DisplayError>::wrap(|| {
-            display0.init()?;
-            display1.init()?;
+        display0.init().unwrap();
+        display1.init().unwrap();
 
-            led_draw_number(&mut display0, 0)?;
-            led_draw_number(&mut display1, 1)?;
+        led_draw_loading(&mut display0).unwrap();
+        led_draw_loading(&mut display1).unwrap();
 
-            display0.flush()?;
-            display1.flush()
-        });
-
-        match z {
-            Ok(_) => {}
-            Err(err) => error!("Got error {}", err),
-        }
+        display0.flush().unwrap();
+        display1.flush().unwrap();
 
         for received in rx {
             match received {
-                DisplayMessage::DisplayState(state, id) => {
+                DisplayMessage::DisplayState(state, icon, id) => {
                     info!("got message to display on {}", id);
                     let display = match id {
                         0 => &mut display0,
@@ -89,17 +94,10 @@ pub fn connect(
                         _ => panic!("Invalid display value received"),
                     };
 
-                    let message = match state {
-                        button_controllers::DisplayState::HardOff => "hard off",
-                        button_controllers::DisplayState::Error => "error",
-                        button_controllers::DisplayState::Unknown => "unknown",
-                        button_controllers::DisplayState::On => "on",
-                        button_controllers::DisplayState::Off => "off",
-                        button_controllers::DisplayState::Auto => "auto",
-                        button_controllers::DisplayState::Rainbow => "rainbow",
-                    };
-
-                    led_draw_string(display, message).unwrap();
+                    let icon = get_image(state, icon);
+                    led_clear(display).unwrap();
+                    led_draw_image(display, icon).unwrap();
+                    // led_draw_string(display, message).unwrap();
                     display.flush().unwrap();
                 }
             }
@@ -109,13 +107,20 @@ pub fn connect(
     Ok(tx)
 }
 
-fn led_draw_number<D>(display: &mut D, number: u8) -> Result<(), D::Error>
+fn led_clear<D>(display: &mut D) -> Result<(), D::Error>
 where
     D: DrawTarget<Error = DisplayError> + Dimensions,
     D::Color: From<Rgb565>,
 {
     display.clear(Rgb565::BLACK.into())?;
+    Ok(())
+}
 
+fn led_draw_loading<D>(display: &mut D) -> Result<(), D::Error>
+where
+    D: DrawTarget<Error = DisplayError> + Dimensions,
+    D::Color: From<Rgb565>,
+{
     Rectangle::new(display.bounding_box().top_left, display.bounding_box().size)
         .into_styled(
             PrimitiveStyleBuilder::new()
@@ -126,7 +131,7 @@ where
         )
         .draw(display)?;
 
-    let t = format!("Hello Rusty\n{}", number);
+    let t = format!("Loading");
 
     Text::new(
         &t,
@@ -135,36 +140,72 @@ where
     )
     .draw(display)?;
 
-    info!("LED rendering number done {}", number);
-
     Ok(())
 }
 
-fn led_draw_string<D>(display: &mut D, t: &str) -> Result<(), D::Error>
+fn get_image<'a>(
+    state: DisplayState,
+    icon: button_controllers::Icon,
+) -> DynamicTga<'a, BinaryColor> {
+    let data = match icon {
+        button_controllers::Icon::Light => match state {
+            button_controllers::DisplayState::HardOff => {
+                include_bytes!("images/light_hard_off_64x64.tga").as_slice()
+            }
+            button_controllers::DisplayState::Error => {
+                include_bytes!("images/light_unknown_64x64.tga").as_slice()
+            }
+            button_controllers::DisplayState::Unknown => {
+                include_bytes!("images/light_unknown_64x64.tga").as_slice()
+            }
+            button_controllers::DisplayState::On => {
+                include_bytes!("images/light_on_64x64.tga").as_slice()
+            }
+            button_controllers::DisplayState::Off => {
+                include_bytes!("images/light_off_64x64.tga").as_slice()
+            }
+            button_controllers::DisplayState::OnOther => {
+                include_bytes!("images/light_on_other_64x64.tga").as_slice()
+            }
+        },
+        button_controllers::Icon::Fan => match state {
+            button_controllers::DisplayState::HardOff => {
+                include_bytes!("images/fan_hard_off_64x64.tga").as_slice()
+            }
+            button_controllers::DisplayState::Error => {
+                include_bytes!("images/fan_unknown_64x64.tga").as_slice()
+            }
+            button_controllers::DisplayState::Unknown => {
+                include_bytes!("images/fan_unknown_64x64.tga").as_slice()
+            }
+            button_controllers::DisplayState::On => {
+                include_bytes!("images/fan_on_64x64.tga").as_slice()
+            }
+            button_controllers::DisplayState::Off => {
+                include_bytes!("images/fan_off_64x64.tga").as_slice()
+            }
+            button_controllers::DisplayState::OnOther => {
+                include_bytes!("images/fan_on_other_64x64.tga").as_slice()
+            }
+        },
+    };
+
+    DynamicTga::from_slice(data).unwrap()
+}
+
+fn led_draw_image<D>(display: &mut D, tga: DynamicTga<BinaryColor>) -> Result<(), D::Error>
 where
-    D: DrawTarget<Error = DisplayError> + Dimensions,
+    D: DrawTarget<Error = DisplayError, Color = BinaryColor> + Dimensions,
     D::Color: From<Rgb565>,
 {
-    display.clear(Rgb565::BLACK.into())?;
+    let size = tga.size();
+    let display_size = display.bounding_box();
+    let center = display_size.center();
 
-    Rectangle::new(display.bounding_box().top_left, display.bounding_box().size)
-        .into_styled(
-            PrimitiveStyleBuilder::new()
-                .fill_color(Rgb565::BLUE.into())
-                .stroke_color(Rgb565::YELLOW.into())
-                .stroke_width(1)
-                .build(),
-        )
-        .draw(display)?;
+    let x = center.x - size.width as i32 / 2;
+    let y = center.y - size.height as i32 / 2;
 
-    Text::new(
-        t,
-        Point::new(10, (display.bounding_box().size.height - 10) as i32 / 2),
-        MonoTextStyle::new(&FONT_10X20, Rgb565::WHITE.into()),
-    )
-    .draw(display)?;
-
-    info!("LED rendering string done {}", t);
+    Image::new(&tga, Point::new(x, y)).draw(display).unwrap();
 
     Ok(())
 }
