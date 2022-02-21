@@ -61,19 +61,12 @@ fn wifi(
         None
     };
 
-    wifi.set_configuration(&Configuration::Mixed(
-        ClientConfiguration {
-            ssid: SSID.into(),
-            password: PASS.into(),
-            channel,
-            ..Default::default()
-        },
-        AccessPointConfiguration {
-            ssid: "aptest".into(),
-            channel: channel.unwrap_or(1),
-            ..Default::default()
-        },
-    ))?;
+    wifi.set_configuration(&Configuration::Client(ClientConfiguration {
+        ssid: SSID.into(),
+        password: PASS.into(),
+        channel,
+        ..Default::default()
+    }))?;
 
     info!("Wifi configuration set, about to get status");
 
@@ -83,7 +76,7 @@ fn wifi(
         ClientStatus::Started(ClientConnectionStatus::Connected(ClientIpStatus::Done(
             _ip_settings,
         ))),
-        ApStatus::Started(ApIpStatus::Done),
+        _,
     ) = status
     {
         info!("Wifi connected");
