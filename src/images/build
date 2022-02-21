@@ -11,12 +11,10 @@ do_image() {
 
 do_image light_off black
 do_image light_hard_off black
-do_image light_unknown black
 do_image light_on white
 do_image light_on_other black
 
 do_image fan_off black
 do_image fan_hard_off black
-do_image fan_unknown black
 do_image fan_on white
 do_image fan_on_other black

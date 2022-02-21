@@ -28,6 +28,7 @@ use embedded_graphics::text::*;
 
 use tinytga::DynamicTga;
 
+use crate::button;
 use crate::button_controllers;
 use crate::button_controllers::DisplayState;
 
@@ -94,10 +95,11 @@ pub fn connect(
                         _ => panic!("Invalid display value received"),
                     };
 
-                    let icon = get_image(state, icon);
+                    let image_category = get_image_category(&state);
+                    let image_data = get_image_data(image_category, icon);
                     led_clear(display).unwrap();
-                    led_draw_image(display, icon).unwrap();
-                    // led_draw_string(display, message).unwrap();
+                    led_draw_image(display, image_data).unwrap();
+                    led_draw_overlay(display, &state).unwrap();
                     display.flush().unwrap();
                 }
             }
@@ -112,7 +114,7 @@ where
     D: DrawTarget<Error = DisplayError> + Dimensions,
     D::Color: From<Rgb565>,
 {
-    display.clear(Rgb565::BLACK.into())?;
+    display.clear(Rgb565::BLACK.into()).unwrap();
     Ok(())
 }
 
@@ -129,7 +131,8 @@ where
                 .stroke_width(1)
                 .build(),
         )
-        .draw(display)?;
+        .draw(display)
+        .unwrap();
 
     let t = "Loading";
 
@@ -138,55 +141,46 @@ where
         Point::new(10, (display.bounding_box().size.height - 10) as i32 / 2),
         MonoTextStyle::new(&FONT_10X20, Rgb565::WHITE.into()),
     )
-    .draw(display)?;
+    .draw(display)
+    .unwrap();
 
     Ok(())
 }
 
-fn get_image<'a>(
-    state: DisplayState,
+enum ImageCategory {
+    HardOff,
+    On,
+    OnOther,
+    Off,
+}
+
+fn get_image_category(state: &DisplayState) -> ImageCategory {
+    match state {
+        DisplayState::HardOff => ImageCategory::HardOff,
+        DisplayState::Error => ImageCategory::Off,
+        DisplayState::Unknown => ImageCategory::Off,
+        DisplayState::On => ImageCategory::On,
+        DisplayState::Off => ImageCategory::Off,
+        DisplayState::OnOther => ImageCategory::OnOther,
+    }
+}
+
+fn get_image_data<'a>(
+    image: ImageCategory,
     icon: button_controllers::Icon,
 ) -> DynamicTga<'a, BinaryColor> {
     let data = match icon {
-        button_controllers::Icon::Light => match state {
-            button_controllers::DisplayState::HardOff => {
-                include_bytes!("images/light_hard_off_64x64.tga").as_slice()
-            }
-            button_controllers::DisplayState::Error => {
-                include_bytes!("images/light_unknown_64x64.tga").as_slice()
-            }
-            button_controllers::DisplayState::Unknown => {
-                include_bytes!("images/light_unknown_64x64.tga").as_slice()
-            }
-            button_controllers::DisplayState::On => {
-                include_bytes!("images/light_on_64x64.tga").as_slice()
-            }
-            button_controllers::DisplayState::Off => {
-                include_bytes!("images/light_off_64x64.tga").as_slice()
-            }
-            button_controllers::DisplayState::OnOther => {
-                include_bytes!("images/light_on_other_64x64.tga").as_slice()
-            }
+        button_controllers::Icon::Light => match image {
+            ImageCategory::HardOff => include_bytes!("images/light_hard_off_64x64.tga").as_slice(),
+            ImageCategory::On => include_bytes!("images/light_on_64x64.tga").as_slice(),
+            ImageCategory::Off => include_bytes!("images/light_off_64x64.tga").as_slice(),
+            ImageCategory::OnOther => include_bytes!("images/light_on_other_64x64.tga").as_slice(),
         },
-        button_controllers::Icon::Fan => match state {
-            button_controllers::DisplayState::HardOff => {
-                include_bytes!("images/fan_hard_off_64x64.tga").as_slice()
-            }
-            button_controllers::DisplayState::Error => {
-                include_bytes!("images/fan_unknown_64x64.tga").as_slice()
-            }
-            button_controllers::DisplayState::Unknown => {
-                include_bytes!("images/fan_unknown_64x64.tga").as_slice()
-            }
-            button_controllers::DisplayState::On => {
-                include_bytes!("images/fan_on_64x64.tga").as_slice()
-            }
-            button_controllers::DisplayState::Off => {
-                include_bytes!("images/fan_off_64x64.tga").as_slice()
-            }
-            button_controllers::DisplayState::OnOther => {
-                include_bytes!("images/fan_on_other_64x64.tga").as_slice()
-            }
+        button_controllers::Icon::Fan => match image {
+            ImageCategory::HardOff => include_bytes!("images/fan_hard_off_64x64.tga").as_slice(),
+            ImageCategory::On => include_bytes!("images/fan_on_64x64.tga").as_slice(),
+            ImageCategory::Off => include_bytes!("images/fan_off_64x64.tga").as_slice(),
+            ImageCategory::OnOther => include_bytes!("images/fan_on_other_64x64.tga").as_slice(),
         },
     };
 
@@ -206,6 +200,54 @@ where
     let y = center.y - size.height as i32 / 2;
 
     Image::new(&tga, Point::new(x, y)).draw(display).unwrap();
+
+    Ok(())
+}
+
+fn led_draw_overlay<D>(display: &mut D, state: &DisplayState) -> Result<(), D::Error>
+where
+    D: DrawTarget<Error = DisplayError, Color = BinaryColor> + Dimensions,
+    D::Color: From<Rgb565>,
+{
+    let display_size = display.bounding_box();
+
+    let text = match state {
+        DisplayState::HardOff => "Hard off",
+        DisplayState::Error => "Error",
+        DisplayState::Unknown => "Lost",
+        DisplayState::On => "On",
+        DisplayState::Off => "Off",
+        DisplayState::OnOther => "Other",
+    };
+
+    if matches!(state, DisplayState::Error | DisplayState::Unknown) {
+        let center = display_size.center();
+        let size = Size::new(60, 24);
+
+        let x = center.x - size.width as i32 / 2;
+        let y = display_size.bottom_right().unwrap().y - 30;
+        let ul = Point::new(x, y);
+
+        Rectangle::new(ul, size)
+            .into_styled(
+                PrimitiveStyleBuilder::new()
+                    .fill_color(Rgb565::BLACK.into())
+                    .stroke_color(Rgb565::WHITE.into())
+                    .stroke_width(1)
+                    .build(),
+            )
+            .draw(display)
+            .unwrap();
+
+        Text::with_alignment(
+            text,
+            Point::new(center.x, y + 17),
+            MonoTextStyle::new(&FONT_10X20, Rgb565::WHITE.into()),
+            Alignment::Center,
+        )
+        .draw(display)
+        .unwrap();
+    }
 
     Ok(())
 }
