@@ -4,9 +4,9 @@ use embedded_svc::wifi::*;
 
 use esp_idf_svc::netif::*;
 use esp_idf_svc::nvs::*;
+use esp_idf_svc::sntp::EspSntp;
 use esp_idf_svc::sysloop::*;
 use esp_idf_svc::wifi::*;
-use esp_idf_svc::sntp::EspSntp;
 
 use anyhow::bail;
 use anyhow::Error;
@@ -71,20 +71,22 @@ fn wifi(
         ..Default::default()
     }))?;
 
-    info!("Wifi configuration set, about to get status");
+    info!("Waiting for wifi");
 
+    use ClientConnectionStatus::Connected;
+    use ClientIpStatus::Done;
+    use ClientStatus::Started;
+
+    fn check_status(status: &Status) -> bool {
+        matches!(&status.0, Started(Connected(Done(_ip_settings))))
+    }
+    wifi.wait_status(check_status);
+
+    info!("Wifi configuration set, about to get status");
     let status = wifi.get_status();
 
-    if let Status(
-        ClientStatus::Started(ClientConnectionStatus::Connected(ClientIpStatus::Done(
-            _ip_settings,
-        ))),
-        _,
-    ) = status
-    {
-        info!("Wifi connected");
-
-        // ping(&ip_settings)?;
+    if let Started(Connected(Done(ip_settings))) = status.0 {
+        info!("Wifi connected: {:?}", ip_settings);
     } else {
         bail!("Unexpected Wifi status: {:?}", status);
     }

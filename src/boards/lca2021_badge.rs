@@ -6,10 +6,10 @@ use esp_idf_hal::prelude::Peripherals;
 
 use log::*;
 
+use crate::button;
+use crate::display;
 use crate::messages;
 use crate::wifi;
-use crate::display;
-use crate::button;
 
 type Result<T, E = Error> = core::result::Result<T, E>;
 

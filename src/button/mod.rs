@@ -1,7 +1,7 @@
 // Copied and adapted from https://github.com/tonarino/panel-firmware/blob/main/src/button.rs
 pub mod esp;
 
-use embedded_hal::digital::v2::InputPin;
+use embedded_hal::digital::blocking::InputPin;
 use esp_idf_sys::EspError;
 use std::thread;
 

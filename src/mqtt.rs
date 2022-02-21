@@ -6,9 +6,7 @@ use anyhow::Error;
 
 use embedded_svc::mqtt::client::{Client, Details, Event, Message, Publish, QoS};
 
-use esp_idf_svc::mqtt::client::{
-    EspMqttClient, EspMqttMessage, MqttClientConfiguration,
-};
+use esp_idf_svc::mqtt::client::{EspMqttClient, EspMqttMessage, MqttClientConfiguration};
 use esp_idf_sys::EspError;
 
 use log::*;
@@ -42,9 +40,9 @@ enum MqttCommand {
 }
 
 fn get_client(url: &str, tx: mpsc::Sender<MqttCommand>) -> Result<EspMqttClient, EspError> {
-    let callback = move |msg: Option<Result<Event<EspMqttMessage>, EspError>>| {
+    let callback = move |msg: &Option<Result<Event<EspMqttMessage>, EspError>>| {
         info!("Got callback");
-        let event_or_error = msg.unwrap();
+        let event_or_error = msg.as_ref().unwrap();
         match event_or_error {
             Err(e) => info!("MQTT Message ERROR: {}", e),
             Ok(Event::Received(msg)) => match msg.details() {
@@ -64,7 +62,7 @@ fn get_client(url: &str, tx: mpsc::Sender<MqttCommand>) -> Result<EspMqttClient,
             Ok(Event::Disconnected) => {
                 tx.send(MqttCommand::MqttDisconnect).unwrap();
             }
-            Ok(event) => info!("MQTT event: {:?}", event),
+            Ok(_event) => info!("Got unknown MQTT event"),
         }
         info!("Done callback");
     };

@@ -65,11 +65,11 @@ experimental = ["esp-idf-svc/experimental", "esp-idf-hal/experimental", "embedde
 anyhow = {version = "1", features = ["backtrace"]}
 log = "0.4"
 url = "2"
-esp-idf-sys = { version = "0.30.3", features = ["binstart"] }
-esp-idf-svc = "0.36.9"
-esp-idf-hal = "0.32.9"
-embedded-svc = "0.16"
-embedded-hal = "0.2.7"
+esp-idf-sys = { version = "0.30.6", features = ["binstart"] }
+esp-idf-svc = "0.37.0"
+esp-idf-hal = "0.33.1"
+embedded-svc = "0.17.1"
+embedded-hal = "=1.0.0-alpha.7"
 embedded-graphics = "0.7"
 display-interface = "0.4"
 display-interface-spi = "0.4"
