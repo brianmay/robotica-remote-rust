@@ -32,21 +32,15 @@ use crate::button;
 use crate::button_controllers;
 use crate::button_controllers::DisplayState;
 
-type Result<T, E = Error> = core::result::Result<T, E>;
+use crate::display::DisplayCommand;
 
-pub enum DisplayMessage {
-    DisplayState(
-        button_controllers::DisplayState,
-        button_controllers::Icon,
-        u32,
-    ),
-}
+type Result<T, E = Error> = core::result::Result<T, E>;
 
 pub fn connect(
     i2c: i2c::I2C0,
     scl: gpio::Gpio4<gpio::Unknown>,
     sda: gpio::Gpio5<gpio::Unknown>,
-) -> Result<mpsc::Sender<DisplayMessage>> {
+) -> Result<mpsc::Sender<DisplayCommand>> {
     let (tx, rx) = mpsc::channel();
 
     let config = <i2c::config::MasterConfig as Default>::default().baudrate(400.kHz().into());
@@ -87,7 +81,7 @@ pub fn connect(
 
         for received in rx {
             match received {
-                DisplayMessage::DisplayState(state, icon, id) => {
+                DisplayCommand::DisplayState(state, icon, id) => {
                     info!("got message to display on {}", id);
                     let display = match id {
                         0 => &mut display0,

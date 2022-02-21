@@ -86,14 +86,13 @@ impl Mqtt {
         }
     }
 
-    pub fn connect(&mut self, tx_to_client: messages::Sender) -> Result<()> {
+    pub fn connect(&mut self, tx_to_client: messages::Sender) {
         let url = self.url.clone();
         let (tx, rx) = mpsc::channel();
         self.tx = Some(tx.clone());
 
         thread::spawn(move || {
             let mut client = get_client(&url, tx).unwrap();
-
             let mut subscriptions: Subscriptions = HashMap::new();
 
             for received in rx {
@@ -135,7 +134,9 @@ impl Mqtt {
                             Some(list) => list.push(subscription),
                             None => {
                                 subscriptions.insert(topic.to_string(), vec![subscription]);
-                                client.subscribe(topic, QoS::AtMostOnce).unwrap();
+                                if let Err(err) = client.subscribe(&topic, QoS::AtMostOnce) {
+                                    error!("Cannot subscribe to {}: {}", topic, err);
+                                }
                             }
                         };
                     }
@@ -149,23 +150,21 @@ impl Mqtt {
                 }
             }
         });
-
-        Ok(())
     }
 
-    pub fn subscribe(&self, topic: &str, label: Label) -> Result<()> {
+    pub fn subscribe(&self, topic: &str, label: Label) {
         let tx = self.tx.clone().unwrap();
-        tx.send(MqttCommand::Subscribe(topic.to_string(), label))?;
-        Ok(())
+        tx.send(MqttCommand::Subscribe(topic.to_string(), label))
+            .unwrap();
     }
 
-    pub fn publish(&self, topic: &str, retain: bool, data: &str) -> Result<()> {
+    pub fn publish(&self, topic: &str, retain: bool, data: &str) {
         let tx = self.tx.clone().unwrap();
         tx.send(MqttCommand::Publish(
             topic.to_string(),
             retain,
             data.to_string(),
-        ))?;
-        Ok(())
+        ))
+        .unwrap();
     }
 }

@@ -17,14 +17,21 @@ const PASS: &str = env!("WIFI_PASS");
 
 type Result<T, E = Error> = core::result::Result<T, E>;
 
-pub fn connect() -> Result<Box<EspWifi>> {
+#[allow(dead_code)]
+pub struct MyWifi {
+    wifi: Box<EspWifi>,
+}
+
+impl crate::wifi::Wifi for MyWifi {}
+
+pub fn connect() -> Result<MyWifi> {
     let netif_stack = Arc::new(EspNetifStack::new()?);
     let sys_loop_stack = Arc::new(EspSysLoopStack::new()?);
     let default_nvs = Arc::new(EspDefaultNvs::new()?);
 
     let wifi = wifi(netif_stack, sys_loop_stack, default_nvs)?;
 
-    Ok(wifi)
+    Ok(MyWifi { wifi })
 }
 
 fn wifi(

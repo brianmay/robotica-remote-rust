@@ -5,21 +5,14 @@
 use std::env;
 use std::panic;
 use std::sync::mpsc;
+use std::thread;
+use std::time::Duration;
 
 use anyhow::bail;
 use anyhow::Error;
 use log::*;
 
-use url;
-
-use smol;
-
-use embedded_hal::adc::OneShot;
-use embedded_hal::digital::v2::InputPin;
-
 use esp_idf_hal::prelude::Peripherals;
-
-use esp_idf_sys::EspError;
 
 mod button;
 use crate::button::{Active, Button, ButtonEvent, Debouncer};
@@ -30,12 +23,13 @@ use crate::button_controllers::switch::SwitchConfig;
 use crate::button_controllers::CommonConfig;
 use crate::button_controllers::Config;
 
-mod displays;
-use crate::displays::DisplayMessage;
+mod display;
+use crate::display::DisplayCommand;
+
+mod wifi;
 
 mod messages;
 mod mqtt;
-mod wifi;
 
 const MQTT_URL: &str = env!("MQTT_URL");
 
@@ -72,53 +66,44 @@ fn get_button_config() -> [Box<dyn Config>; 2] {
     ]
 }
 
+fn configure_lca2021_badge(
+    tx: mpsc::Sender<messages::Message>,
+) -> Result<(Box<dyn wifi::Wifi>, mpsc::Sender<display::DisplayCommand>)> {
+    let peripherals = Peripherals::take().unwrap();
+    let pins = peripherals.pins;
+
+    let display = display::lca2021_badge::connect(peripherals.i2c0, pins.gpio4, pins.gpio5)?;
+
+    let wifi = wifi::esp::connect()?;
+
+    let pin = pins.gpio16.into_input().unwrap();
+    button::esp::configure_button(pin, tx.clone(), 0)?;
+
+    let pin = pins.gpio17.into_input().unwrap();
+    button::esp::configure_button(pin, tx, 1)?;
+
+    Ok((Box::new(wifi), display))
+}
+
 fn initialize() -> Result<()> {
     esp_idf_sys::link_patches();
     esp_idf_svc::log::EspLogger::initialize_default();
     Ok(())
 }
 
-fn configure_button<T: 'static + InputPin<Error = EspError> + Send>(
-    pin: T,
-    tx: &messages::Sender,
-    id: u32,
-) -> Result<()> {
-    let frequency = 100;
-
-    let debounced_encoder_pin = Debouncer::new(pin, Active::Low, 30, frequency);
-    let encoder_button_1 = Button::new(debounced_encoder_pin, id);
-    encoder_button_1.connect(tx.clone());
-
-    Ok(())
-}
-
-fn main() {
-    loop {
-        match main_inner() {
-            Ok(()) => error!("main unexpected returned"),
-            Err(err) => error!("main genereated error: {}", err),
-        }
-    }
-}
-
-fn main_inner() -> Result<()> {
+fn main() -> Result<()> {
     initialize().unwrap();
-
-    let peripherals = Peripherals::take().unwrap();
-    let pins = peripherals.pins;
-    let displays = displays::connect(peripherals.i2c0, pins.gpio4, pins.gpio5)?;
-
-    let _wifi = wifi::connect();
 
     let (tx, rx) = mpsc::channel();
 
+    let (_wifi, display) = configure_lca2021_badge(tx.clone())?;
     let config = get_button_config();
+
     let mut controllers: Vec<Box<dyn button_controllers::Controller>> =
         config.iter().map(|x| x.create_controller()).collect();
 
     let mut mqtt = mqtt::Mqtt::new(MQTT_URL);
-
-    mqtt.connect(tx.clone())?;
+    mqtt.connect(tx);
 
     for (index, f) in controllers.iter().enumerate() {
         let subscriptions = f.get_subscriptions();
@@ -127,15 +112,9 @@ fn main_inner() -> Result<()> {
                 component_id: index as u32,
                 subscription_id: s.label,
             };
-            mqtt.subscribe(&s.topic, label)?;
+            mqtt.subscribe(&s.topic, label);
         }
     }
-
-    let pin = pins.gpio16.into_input().unwrap();
-    configure_button(pin, &tx, 0)?;
-
-    let pin = pins.gpio17.into_input().unwrap();
-    configure_button(pin, &tx, 1)?;
 
     for received in rx {
         match received {
@@ -147,8 +126,8 @@ fn main_inner() -> Result<()> {
                 controller.process_message(sid, data);
                 let icon = controller.get_icon();
                 let state = controller.get_display_state();
-                let message = DisplayMessage::DisplayState(state, icon, id);
-                displays.send(message)?;
+                let message = DisplayCommand::DisplayState(state, icon, id);
+                display.send(message).unwrap();
             }
             messages::Message::MqttConnect => {}
             messages::Message::MqttDisconnect => {
@@ -156,8 +135,8 @@ fn main_inner() -> Result<()> {
                     controller.process_disconnected();
                     let state = controller.get_display_state();
                     let icon = controller.get_icon();
-                    let message = DisplayMessage::DisplayState(state, icon, id as u32);
-                    displays.send(message)?;
+                    let message = DisplayCommand::DisplayState(state, icon, id as u32);
+                    display.send(message).unwrap();
                 }
             }
             messages::Message::ButtonPress(id) => {
@@ -167,7 +146,7 @@ fn main_inner() -> Result<()> {
                     let topic = command.get_topic();
                     let data = command.get_message();
                     info!("press {}: {}", topic, data);
-                    mqtt.publish(&topic, false, &data)?;
+                    mqtt.publish(&topic, false, &data);
                 }
             }
             messages::Message::ButtonRelease(_id) => {}
