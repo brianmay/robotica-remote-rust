@@ -13,6 +13,7 @@ use anyhow::Error;
 use log::*;
 
 use esp_idf_hal::prelude::Peripherals;
+use esp_idf_svc::sntp::EspSntp;
 
 mod button;
 use crate::button::{Active, Button, ButtonEvent, Debouncer};
@@ -85,18 +86,25 @@ fn configure_lca2021_badge(
     Ok((Box::new(wifi), display))
 }
 
-fn initialize() -> Result<()> {
+fn initialize() {
     esp_idf_sys::link_patches();
-    esp_idf_svc::log::EspLogger::initialize_default();
-    Ok(())
+
+    use pretty_env_logger::env_logger::WriteStyle;
+
+    pretty_env_logger::formatted_timed_builder()
+        .filter(None, LevelFilter::Trace)
+        .write_style(WriteStyle::Always)
+        .init();
 }
 
 fn main() -> Result<()> {
-    initialize().unwrap();
+    initialize();
 
     let (tx, rx) = mpsc::channel();
 
     let (_wifi, display) = configure_lca2021_badge(tx.clone())?;
+    let _sntp = EspSntp::new_default()?;
+
     let config = get_button_config();
 
     let mut controllers: Vec<Box<dyn button_controllers::Controller>> =
