@@ -1,6 +1,3 @@
-use std::sync::Arc;
-use std::sync::Mutex;
-
 use crate::messages;
 use crate::mqtt;
 

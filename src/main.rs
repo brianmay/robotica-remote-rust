@@ -1,22 +1,13 @@
-#![allow(unused_imports)]
 #![allow(clippy::single_component_path_imports)]
 #![feature(backtrace)]
 
 use std::env;
-use std::panic;
 use std::sync::mpsc;
-use std::thread;
-use std::time::Duration;
 
-use anyhow::bail;
 use anyhow::Error;
 use log::*;
 
-use esp_idf_hal::prelude::Peripherals;
-use esp_idf_svc::sntp::EspSntp;
-
 mod button;
-use crate::button::{Active, Button, ButtonEvent, Debouncer};
 
 mod button_controllers;
 use crate::button_controllers::lights::LightConfig;
@@ -26,6 +17,8 @@ use crate::button_controllers::Config;
 
 mod display;
 use crate::display::DisplayCommand;
+
+mod boards;
 
 mod wifi;
 
@@ -67,43 +60,12 @@ fn get_button_config() -> [Box<dyn Config>; 2] {
     ]
 }
 
-fn configure_lca2021_badge(
-    tx: mpsc::Sender<messages::Message>,
-) -> Result<(Box<dyn wifi::Wifi>, mpsc::Sender<display::DisplayCommand>)> {
-    let peripherals = Peripherals::take().unwrap();
-    let pins = peripherals.pins;
-
-    let display = display::lca2021_badge::connect(peripherals.i2c0, pins.gpio4, pins.gpio5)?;
-
-    let wifi = wifi::esp::connect()?;
-
-    let pin = pins.gpio16.into_input().unwrap();
-    button::esp::configure_button(pin, tx.clone(), 0)?;
-
-    let pin = pins.gpio17.into_input().unwrap();
-    button::esp::configure_button(pin, tx, 1)?;
-
-    Ok((Box::new(wifi), display))
-}
-
-fn initialize() {
-    esp_idf_sys::link_patches();
-
-    use pretty_env_logger::env_logger::WriteStyle;
-
-    pretty_env_logger::formatted_timed_builder()
-        .filter(None, LevelFilter::Trace)
-        .write_style(WriteStyle::Always)
-        .init();
-}
-
 fn main() -> Result<()> {
-    initialize();
+    boards::lca2021_badge::initialize();
 
     let (tx, rx) = mpsc::channel();
 
-    let (_wifi, display) = configure_lca2021_badge(tx.clone())?;
-    let _sntp = EspSntp::new_default()?;
+    let (_wifi, display) = boards::lca2021_badge::configure_devices(tx.clone())?;
 
     let config = get_button_config();
 

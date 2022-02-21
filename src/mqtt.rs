@@ -4,11 +4,10 @@ use std::thread;
 
 use anyhow::Error;
 
-use embedded_svc::mqtt::client::{Client, Details, Event, Message, Publish, QoS, TopicToken};
+use embedded_svc::mqtt::client::{Client, Details, Event, Message, Publish, QoS};
 
-use esp_idf_hal::ledc::Resolution;
 use esp_idf_svc::mqtt::client::{
-    EspMqttClient, EspMqttConnection, EspMqttMessage, MqttClientConfiguration,
+    EspMqttClient, EspMqttMessage, MqttClientConfiguration,
 };
 use esp_idf_sys::EspError;
 
@@ -72,6 +71,7 @@ fn get_client(url: &str, tx: mpsc::Sender<MqttCommand>) -> Result<EspMqttClient,
 
     let conf = MqttClientConfiguration {
         client_id: Some("rust-esp32-std-demo"),
+        keep_alive_interval: Some(std::time::Duration::new(60, 0)),
         ..Default::default()
     };
 

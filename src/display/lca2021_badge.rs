@@ -6,17 +6,12 @@ use anyhow::Error;
 use display_interface::DisplayError;
 use log::*;
 
-use embedded_svc::utils::anyerror::*;
-
 use ssd1306;
 use ssd1306::mode::DisplayConfig;
 
-use esp_idf_hal::adc;
-use esp_idf_hal::delay;
-use esp_idf_hal::gpio::{self, GpioPin, Input, Pins, Pull};
+use esp_idf_hal::gpio;
 use esp_idf_hal::i2c;
 use esp_idf_hal::prelude::*;
-use esp_idf_hal::spi;
 
 use embedded_graphics::geometry::Point;
 use embedded_graphics::image::*;
@@ -28,7 +23,6 @@ use embedded_graphics::text::*;
 
 use tinytga::DynamicTga;
 
-use crate::button;
 use crate::button_controllers;
 use crate::button_controllers::DisplayState;
 
@@ -51,8 +45,6 @@ pub fn connect(
     let builder = thread::Builder::new().stack_size(8 * 1024);
 
     builder.spawn(move || {
-        use ssd1306::Ssd1306;
-
         let di0 = ssd1306::I2CDisplayInterface::new_custom_address(bus.acquire_i2c(), 0x3C);
         let di1 = ssd1306::I2CDisplayInterface::new_custom_address(bus.acquire_i2c(), 0x3D);
 

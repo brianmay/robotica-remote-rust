@@ -3,13 +3,8 @@ pub mod switch;
 
 use std::convert::TryFrom;
 use std::convert::TryInto;
-use std::{collections::HashMap, ops::Sub};
 
-use epd_waveshare::graphics::Display;
-use ili9341::DisplaySize;
 use log::*;
-
-use crate::button::Button;
 
 type Label = u32;
 

@@ -1,5 +1,3 @@
-use display_interface::DisplayError;
-
 use crate::button_controllers::*;
 
 #[derive(Clone)]

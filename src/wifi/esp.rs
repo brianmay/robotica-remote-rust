@@ -1,4 +1,4 @@
-use std::{env, sync::atomic::*, sync::Arc, thread, time::*};
+use std::{env, sync::Arc};
 
 use embedded_svc::wifi::*;
 
@@ -6,6 +6,7 @@ use esp_idf_svc::netif::*;
 use esp_idf_svc::nvs::*;
 use esp_idf_svc::sysloop::*;
 use esp_idf_svc::wifi::*;
+use esp_idf_svc::sntp::EspSntp;
 
 use anyhow::bail;
 use anyhow::Error;
@@ -20,6 +21,7 @@ type Result<T, E = Error> = core::result::Result<T, E>;
 #[allow(dead_code)]
 pub struct MyWifi {
     wifi: Box<EspWifi>,
+    sntp: EspSntp,
 }
 
 impl crate::wifi::Wifi for MyWifi {}
@@ -30,8 +32,9 @@ pub fn connect() -> Result<MyWifi> {
     let default_nvs = Arc::new(EspDefaultNvs::new()?);
 
     let wifi = wifi(netif_stack, sys_loop_stack, default_nvs)?;
+    let sntp = EspSntp::new_default()?;
 
-    Ok(MyWifi { wifi })
+    Ok(MyWifi { wifi, sntp })
 }
 
 fn wifi(
