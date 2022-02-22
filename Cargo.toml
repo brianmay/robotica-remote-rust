@@ -1,12 +1,12 @@
 [package]
-name = "rust-esp32-std-demo"
+name = "robotica-remote-rust"
 version = "0.22.8"
-authors = ["ivmarkov"]
+authors = ["brianmay"]
 edition = "2018"
 categories = ["embedded", "hardware-support"]
 keywords = ["embedded", "svc", "idf", "esp-idf", "esp32"]
-description = "A demo binary crate for the ESP32 and ESP-IDF, which connects to WiFi, Ethernet, drives a small HTTP server and draws on a LED screen"
-repository = "https://github.com/ivmarkov/rust-esp32-std-demo"
+description = "A remote control system based on MQTT"
+repository = "https://github.com/brianmay/robotica-remote-rust/"
 license = "MIT OR Apache-2.0"
 readme = "README.md"
 
@@ -25,41 +25,10 @@ debug = true # Symbols are nice and they don't increase the size on Flash
 opt-level = "z"
 
 [features]
-default = ["experimental", "ssd1306g"]
+default = []
 
 # Enable this feature for the build to use ESP-IDF native tooling instead of PlatformIO under the hood
 native = ["esp-idf-sys/native"]
-
-# Enable this feature if you are building for QEMU
-qemu = []
-
-# Enable this feature in case you have a Kaluga board and would like to see a LED screen demo
-kaluga = []
-
-# Enable this feature in case you have a TTGO board and would like to see a LED screen demo
-ttgo = []
-
-# Enable this feature in case you have an ESP32S3-USB-OTG board and would like to see a LED screen demo
-heltec = []
-
-# Enable this feature in case you have a generic SSD1306 Display connected via SPI to pins 3, 4, 5, 16, 18, 23 (SPI3) of your board
-ssd1306g_spi = []
-
-# Enable this feature in case you have a generic SSD1306 screen connected to pins 14, 22 and 21 of your board
-ssd1306g = []
-
-esp32s3_usb_otg = []
-
-# Enable this feature in case you have an RMII IP101 Ethernet adapter
-ip101 = []
-
-# Enable this feature in case you have an SPI W5500 Ethernet adapter
-w5500 = []
-
-# Enable this feature in case you have a Waveshare board and 4.2" e-paper
-waveshare_epd = []
-
-experimental = ["esp-idf-svc/experimental", "esp-idf-hal/experimental", "embedded-svc/experimental"]
 
 [dependencies]
 anyhow = {version = "1", features = ["backtrace"]}
@@ -86,6 +55,3 @@ pretty_env_logger = "0.4.0"
 [build-dependencies]
 embuild = "0.28"
 anyhow = "1"
-
-# Future; might be possible once https://github.com/rust-lang/cargo/issues/9096 hits Cargo nightly:
-#rust-esp32-ulp-blink = { git = "https://github.com/ivmarkov/rust-esp32-ulp-blink", artifact = "bin" }
