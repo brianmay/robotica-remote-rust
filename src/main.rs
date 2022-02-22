@@ -72,8 +72,7 @@ fn main() -> Result<()> {
     let mut controllers: Vec<Box<dyn button_controllers::Controller>> =
         config.iter().map(|x| x.create_controller()).collect();
 
-    let mut mqtt = mqtt::Mqtt::new(MQTT_URL);
-    mqtt.connect(tx);
+    let mqtt = mqtt::Mqtt::connect(MQTT_URL, tx);
 
     for (index, f) in controllers.iter().enumerate() {
         let subscriptions = f.get_subscriptions();

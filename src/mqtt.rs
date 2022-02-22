@@ -27,8 +27,7 @@ struct Subscription {
 
 type Subscriptions = HashMap<String, Vec<Subscription>>;
 pub struct Mqtt {
-    tx: Option<mpsc::Sender<MqttCommand>>,
-    url: String,
+    tx: mpsc::Sender<MqttCommand>,
 }
 
 enum MqttCommand {
@@ -77,20 +76,14 @@ fn get_client(url: &str, tx: mpsc::Sender<MqttCommand>) -> Result<EspMqttClient,
 }
 
 impl Mqtt {
-    pub fn new(url: &str) -> Self {
-        Mqtt {
-            tx: None,
-            url: url.to_string(),
-        }
-    }
-
-    pub fn connect(&mut self, tx_to_client: messages::Sender) {
-        let url = self.url.clone();
+    pub fn connect(url: &str, tx_to_client: messages::Sender) -> Self {
         let (tx, rx) = mpsc::channel();
-        self.tx = Some(tx.clone());
+        let url = url.to_string();
+
+        let tx_copy = tx.clone();
 
         thread::spawn(move || {
-            let mut client = get_client(&url, tx).unwrap();
+            let mut client = get_client(&url, tx_copy).unwrap();
             let mut subscriptions: Subscriptions = HashMap::new();
 
             for received in rx {
@@ -148,16 +141,18 @@ impl Mqtt {
                 }
             }
         });
+
+        Mqtt { tx }
     }
 
     pub fn subscribe(&self, topic: &str, label: Label) {
-        let tx = self.tx.clone().unwrap();
+        let tx = self.tx.clone();
         tx.send(MqttCommand::Subscribe(topic.to_string(), label))
             .unwrap();
     }
 
     pub fn publish(&self, topic: &str, retain: bool, data: &str) {
-        let tx = self.tx.clone().unwrap();
+        let tx = self.tx.clone();
         tx.send(MqttCommand::Publish(
             topic.to_string(),
             retain,

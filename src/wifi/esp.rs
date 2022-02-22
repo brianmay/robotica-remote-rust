@@ -83,6 +83,7 @@ fn wifi(
     wifi.wait_status(check_status);
 
     info!("Wifi configuration set, about to get status");
+
     let status = wifi.get_status();
 
     if let Started(Connected(Done(ip_settings))) = status.0 {
