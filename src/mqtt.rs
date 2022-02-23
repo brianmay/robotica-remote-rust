@@ -16,9 +16,9 @@ use crate::messages;
 type Result<T, E = Error> = core::result::Result<T, E>;
 
 #[derive(Clone)]
-pub struct Label {
-    pub component_id: u32,
-    pub subscription_id: u32,
+pub enum Label {
+    Button(u32, u32),
+    NightStatus,
 }
 
 struct Subscription {

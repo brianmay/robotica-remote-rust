@@ -180,21 +180,12 @@ fn main() -> Result<()> {
     for (index, f) in controllers.iter().enumerate() {
         let subscriptions = f.get_subscriptions();
         for s in subscriptions {
-            let label = mqtt::Label {
-                component_id: index as u32,
-                subscription_id: s.label,
-            };
+            let label = mqtt::Label::Button(index as u32, s.label);
             mqtt.subscribe(&s.topic, label);
         }
     }
 
-    mqtt.subscribe(
-        "state/Brian/Night/power",
-        mqtt::Label {
-            component_id: 100,
-            subscription_id: 0,
-        },
-    );
+    mqtt.subscribe("state/Brian/Night/power", mqtt::Label::NightStatus);
 
     let mut timer_service = EspTimerService::new().unwrap();
     let mut timer = timer_service
@@ -212,14 +203,7 @@ fn main() -> Result<()> {
 
     for received in rx {
         match received {
-            Message::MqttReceived(
-                _,
-                power,
-                mqtt::Label {
-                    component_id: 100,
-                    subscription_id: _,
-                },
-            ) => {
+            Message::MqttReceived(_, power, mqtt::Label::NightStatus) => {
                 requested_display_status = match (&requested_display_status, power.as_str()) {
                     (RequestedDisplayStatus::Day, "ON") => RequestedDisplayStatus::Night(false),
                     (_, "ON") => requested_display_status,
@@ -234,10 +218,8 @@ fn main() -> Result<()> {
                     &mut status,
                 );
             }
-            Message::MqttReceived(topic, data, label) => {
-                info!("Got message {}: {}", topic, data);
-                let id = label.component_id;
-                let sid = label.subscription_id;
+            Message::MqttReceived(topic, data, mqtt::Label::Button(id, sid)) => {
+                info!("Got message: {} - {}", topic, data);
                 let controller = controllers.get_mut(id as usize).unwrap();
                 controller.process_message(sid, data);
                 update_display(&display, id, controller.as_ref(), &status);
