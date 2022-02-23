@@ -66,6 +66,41 @@ fn get_button_config() -> [Box<dyn Config>; 2] {
     ]
 }
 
+enum RequestedDisplayStatus {
+    Day,
+    Night(bool),
+}
+
+struct ActualDisplayStatus {
+    timer_on: bool,
+    display_on: bool,
+}
+
+impl RequestedDisplayStatus {
+    fn get_timer_required(&self) -> bool {
+        matches!(self, RequestedDisplayStatus::Night(true))
+    }
+
+    fn get_display_required(&self) -> bool {
+        match self {
+            RequestedDisplayStatus::Day => true,
+            RequestedDisplayStatus::Night(display_on) => *display_on,
+        }
+    }
+
+    fn reset_timer(&mut self) {
+        if let RequestedDisplayStatus::Night(false) = self {
+            *self = RequestedDisplayStatus::Night(true);
+        }
+    }
+
+    fn got_timer(&mut self) {
+        if let RequestedDisplayStatus::Night(true) = self {
+            *self = RequestedDisplayStatus::Night(false);
+        }
+    }
+}
+
 fn main() -> Result<()> {
     boards::lca2021_badge::initialize();
 
@@ -91,42 +126,64 @@ fn main() -> Result<()> {
         }
     }
 
+    mqtt.subscribe(
+        "state/Brian/Night/power",
+        mqtt::Label {
+            component_id: 100,
+            subscription_id: 0,
+        },
+    );
+
     let update_controller =
-        |id: u32, controller: &dyn button_controllers::Controller, blank: bool| {
+        |id: u32, controller: &dyn button_controllers::Controller, status: &ActualDisplayStatus| {
             let state = controller.get_display_state();
             let icon = controller.get_icon();
-            if !blank {
+            if status.display_on {
                 let message = DisplayCommand::DisplayState(state, icon, id as u32);
                 display.send(message).unwrap();
             }
         };
 
     let update_displays = |controllers: &Vec<Box<dyn button_controllers::Controller>>,
-                           blank: bool| {
+                           status: &ActualDisplayStatus| {
         for (id, controller) in controllers.iter().enumerate() {
-            update_controller(id as u32, controller.as_ref(), blank);
+            update_controller(id as u32, controller.as_ref(), status);
         }
     };
 
-    let do_blank = |timer: &mut EspTimer, blank: &mut bool| {
-        if !*blank {
-            info!("Blanking screen");
-            timer.cancel().unwrap();
-            *blank = true;
-            display.send(DisplayCommand::BlankAll).unwrap();
-        }
-    };
+    let do_blank = |controllers: &Vec<Box<dyn button_controllers::Controller>>,
+                    timer: &mut EspTimer,
+                    requested_display_status: &RequestedDisplayStatus,
+                    status: &mut ActualDisplayStatus| {
+        let timer_required = requested_display_status.get_timer_required();
+        let display_required = requested_display_status.get_display_required();
 
-    let do_unblank = |controllers: &Vec<Box<dyn button_controllers::Controller>>,
-                      timer: &mut EspTimer,
-                      blank: &mut bool| {
-        if *blank {
-            info!("Unblanking screen");
-            timer.cancel().unwrap();
-            timer.after(std::time::Duration::new(10, 0)).unwrap();
-            *blank = false;
-            update_displays(controllers, *blank);
-        }
+        match (timer_required, status.timer_on) {
+            (true, false) => {
+                timer.cancel().unwrap();
+                timer.after(std::time::Duration::new(10, 0)).unwrap();
+                status.timer_on = true;
+            }
+            (false, true) => {
+                timer.cancel().unwrap();
+                status.timer_on = false;
+            }
+            (true, true) => {}
+            (false, false) => {}
+        };
+
+        match (display_required, status.display_on) {
+            (true, false) => {
+                status.display_on = true;
+                update_displays(controllers, status);
+            }
+            (false, true) => {
+                status.display_on = false;
+                display.send(DisplayCommand::BlankAll).unwrap();
+            }
+            (true, true) => {}
+            (false, false) => {}
+        };
     };
 
     let mut timer_service = EspTimerService::new().unwrap();
@@ -137,17 +194,40 @@ fn main() -> Result<()> {
         .unwrap();
     timer.after(std::time::Duration::new(10, 0)).unwrap();
 
-    let mut blank = false;
+    let mut requested_display_status: RequestedDisplayStatus = RequestedDisplayStatus::Day;
+    let mut status: ActualDisplayStatus = ActualDisplayStatus {
+        display_on: true,
+        timer_on: false,
+    };
 
     for received in rx {
         match received {
+            Message::MqttReceived(
+                _,
+                power,
+                mqtt::Label {
+                    component_id: 100,
+                    subscription_id: _,
+                },
+            ) => {
+                requested_display_status = match power.as_str() {
+                    "ON" => RequestedDisplayStatus::Night(status.display_on),
+                    _ => RequestedDisplayStatus::Day,
+                };
+                do_blank(
+                    &controllers,
+                    &mut timer,
+                    &requested_display_status,
+                    &mut status,
+                );
+            }
             Message::MqttReceived(topic, data, label) => {
                 info!("Got message {}: {}", topic, data);
                 let id = label.component_id;
                 let sid = label.subscription_id;
                 let controller = controllers.get_mut(id as usize).unwrap();
                 controller.process_message(sid, data);
-                update_controller(id, controller.as_ref(), blank);
+                update_controller(id, controller.as_ref(), &status);
             }
             Message::MqttConnect => {
                 info!("Got connected");
@@ -157,11 +237,17 @@ fn main() -> Result<()> {
                 for controller in controllers.iter_mut() {
                     controller.process_disconnected();
                 }
-                update_displays(&controllers, blank);
+                update_displays(&controllers, &status);
             }
             Message::ButtonPress(id) => {
                 info!("Got button {} press", id);
-                do_unblank(&controllers, &mut timer, &mut blank);
+                requested_display_status.reset_timer();
+                do_blank(
+                    &controllers,
+                    &mut timer,
+                    &requested_display_status,
+                    &mut status,
+                );
 
                 let controller = controllers.get_mut(id as usize).unwrap();
                 let commands = controller.get_press_commands();
@@ -174,10 +260,23 @@ fn main() -> Result<()> {
             }
             Message::ButtonRelease(id) => {
                 info!("Got button {} release", id);
-                do_unblank(&controllers, &mut timer, &mut blank);
+                requested_display_status.reset_timer();
+                do_blank(
+                    &controllers,
+                    &mut timer,
+                    &requested_display_status,
+                    &mut status,
+                );
             }
             Message::BlankDisplays => {
-                do_blank(&mut timer, &mut blank);
+                info!("Got blank display timer");
+                requested_display_status.got_timer();
+                do_blank(
+                    &controllers,
+                    &mut timer,
+                    &requested_display_status,
+                    &mut status,
+                );
             }
         }
     }
