@@ -38,9 +38,21 @@ enum MqttCommand {
     Publish(String, bool, String),
 }
 
+fn event_to_string(event: &Event<EspMqttMessage>) -> String {
+    match event {
+        Event::BeforeConnect => "BeforeConnect".to_string(),
+        Event::Connected(connected) => format!("Connected(session: {})", connected),
+        Event::Disconnected => "Disconnected".to_string(),
+        Event::Subscribed(message_id) => format!("Subscribed({})", message_id),
+        Event::Unsubscribed(message_id) => format!("Unsubscribed({})", message_id),
+        Event::Published(message_id) => format!("Published({})", message_id),
+        Event::Received(message) => format!("Received({})", message.id()),
+        Event::Deleted(message_id) => format!("Deleted({})", message_id),
+    }
+}
+
 fn get_client(url: &str, tx: mpsc::Sender<MqttCommand>) -> Result<EspMqttClient, EspError> {
     let callback = move |msg: &Option<Result<Event<EspMqttMessage>, EspError>>| {
-        info!("Got callback");
         let event_or_error = msg.as_ref().unwrap();
         match event_or_error {
             Err(e) => info!("MQTT Message ERROR: {}", e),
@@ -61,9 +73,8 @@ fn get_client(url: &str, tx: mpsc::Sender<MqttCommand>) -> Result<EspMqttClient,
             Ok(Event::Disconnected) => {
                 tx.send(MqttCommand::MqttDisconnect).unwrap();
             }
-            Ok(_event) => info!("Got unknown MQTT event"),
+            Ok(event) => info!("Got unknown MQTT event {:?}", event_to_string(event)),
         }
-        info!("Done callback");
     };
 
     let conf = MqttClientConfiguration {
@@ -89,7 +100,6 @@ impl Mqtt {
             for received in rx {
                 match received {
                     MqttCommand::MqttConnect => {
-                        info!("got MqttConnect");
                         for (topic, _) in subscriptions.iter() {
                             client.subscribe(topic, QoS::AtMostOnce).unwrap();
                         }
@@ -103,7 +113,6 @@ impl Mqtt {
                     }
 
                     MqttCommand::MqttReceived(topic, data) => {
-                        info!("got MqttMessage");
                         if let Some(list) = subscriptions.get(&topic) {
                             for s in list {
                                 tx_to_client
@@ -118,7 +127,6 @@ impl Mqtt {
                     }
 
                     MqttCommand::Subscribe(topic, label) => {
-                        info!("got Subscribe");
                         let subscription = Subscription { label };
 
                         match subscriptions.get_mut(&topic) {
@@ -133,7 +141,6 @@ impl Mqtt {
                     }
 
                     MqttCommand::Publish(topic, retain, data) => {
-                        info!("got Publish");
                         client
                             .publish(topic, QoS::AtMostOnce, retain, data.as_bytes())
                             .unwrap();

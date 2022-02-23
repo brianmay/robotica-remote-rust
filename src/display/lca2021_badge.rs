@@ -4,7 +4,6 @@ use std::thread;
 use anyhow::Error;
 
 use display_interface::DisplayError;
-use log::*;
 
 use ssd1306;
 use ssd1306::mode::DisplayConfig;
@@ -29,6 +28,33 @@ use crate::button_controllers::DisplayState;
 use crate::display::DisplayCommand;
 
 type Result<T, E = Error> = core::result::Result<T, E>;
+
+// pub fn get_displays<D>(
+//     i2c: i2c::I2C0,
+//     scl: gpio::Gpio4<gpio::Unknown>,
+//     sda: gpio::Gpio5<gpio::Unknown>,
+// ) -> Result<D>
+// where
+//     D: From<ssd1306::Ssd1306>
+//     // D: DrawTarget<Error = DisplayError, Color = BinaryColor> + Dimensions,
+//     // D::Color: From<Rgb565>,
+// {
+//     let config = <i2c::config::MasterConfig as Default>::default().baudrate(400.kHz().into());
+//     let xxx =
+//         i2c::Master::<i2c::I2C0, _, _>::new(i2c, i2c::MasterPins { sda, scl }, config).unwrap();
+//     let bus = shared_bus::BusManagerSimple::new(xxx);
+
+//     let di = ssd1306::I2CDisplayInterface::new_custom_address(bus.acquire_i2c(), 0x3C);
+
+//     let mut display = ssd1306::Ssd1306::new(
+//         di,
+//         ssd1306::size::DisplaySize128x64,
+//         ssd1306::rotation::DisplayRotation::Rotate0,
+//     )
+//     .into_buffered_graphics_mode();
+
+//     Ok(display)
+// }
 
 pub fn connect(
     i2c: i2c::I2C0,
@@ -74,7 +100,6 @@ pub fn connect(
         for received in rx {
             match received {
                 DisplayCommand::DisplayState(state, icon, id) => {
-                    info!("got message to display on {}", id);
                     let display = match id {
                         0 => &mut display0,
                         1 => &mut display1,
@@ -87,6 +112,13 @@ pub fn connect(
                     led_draw_image(display, image_data).unwrap();
                     led_draw_overlay(display, &state).unwrap();
                     display.flush().unwrap();
+                }
+                DisplayCommand::BlankAll => {
+                    led_clear(&mut display0).unwrap();
+                    display0.flush().unwrap();
+
+                    led_clear(&mut display1).unwrap();
+                    display1.flush().unwrap();
                 }
             }
         }

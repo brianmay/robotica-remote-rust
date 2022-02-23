@@ -5,6 +5,11 @@ use std::env;
 use std::sync::mpsc;
 
 use anyhow::Error;
+use embedded_svc::timer::OnceTimer;
+use embedded_svc::timer::Timer;
+use embedded_svc::timer::TimerService;
+use esp_idf_svc::timer::EspTimer;
+use esp_idf_svc::timer::EspTimerService;
 use log::*;
 
 mod button;
@@ -17,6 +22,7 @@ use crate::button_controllers::Config;
 
 mod display;
 use crate::display::DisplayCommand;
+use crate::messages::Message;
 
 mod boards;
 
@@ -72,7 +78,7 @@ fn main() -> Result<()> {
     let mut controllers: Vec<Box<dyn button_controllers::Controller>> =
         config.iter().map(|x| x.create_controller()).collect();
 
-    let mqtt = mqtt::Mqtt::connect(MQTT_URL, tx);
+    let mqtt = mqtt::Mqtt::connect(MQTT_URL, tx.clone());
 
     for (index, f) in controllers.iter().enumerate() {
         let subscriptions = f.get_subscriptions();
@@ -85,40 +91,94 @@ fn main() -> Result<()> {
         }
     }
 
+    let update_controller =
+        |id: u32, controller: &dyn button_controllers::Controller, blank: bool| {
+            let state = controller.get_display_state();
+            let icon = controller.get_icon();
+            if !blank {
+                let message = DisplayCommand::DisplayState(state, icon, id as u32);
+                display.send(message).unwrap();
+            }
+        };
+
+    let update_displays = |controllers: &Vec<Box<dyn button_controllers::Controller>>,
+                           blank: bool| {
+        for (id, controller) in controllers.iter().enumerate() {
+            update_controller(id as u32, controller.as_ref(), blank);
+        }
+    };
+
+    let do_blank = |timer: &mut EspTimer, blank: &mut bool| {
+        if !*blank {
+            info!("Blanking screen");
+            timer.cancel().unwrap();
+            *blank = true;
+            display.send(DisplayCommand::BlankAll).unwrap();
+        }
+    };
+
+    let do_unblank = |controllers: &Vec<Box<dyn button_controllers::Controller>>,
+                      timer: &mut EspTimer,
+                      blank: &mut bool| {
+        if *blank {
+            info!("Unblanking screen");
+            timer.cancel().unwrap();
+            timer.after(std::time::Duration::new(10, 0)).unwrap();
+            *blank = false;
+            update_displays(controllers, *blank);
+        }
+    };
+
+    let mut timer_service = EspTimerService::new().unwrap();
+    let mut timer = timer_service
+        .timer(move || {
+            tx.send(Message::BlankDisplays).unwrap();
+        })
+        .unwrap();
+    timer.after(std::time::Duration::new(10, 0)).unwrap();
+
+    let mut blank = false;
+
     for received in rx {
         match received {
-            messages::Message::MqttReceived(topic, data, label) => {
-                info!("got message {} {}", topic, data);
+            Message::MqttReceived(topic, data, label) => {
+                info!("Got message {}: {}", topic, data);
                 let id = label.component_id;
                 let sid = label.subscription_id;
                 let controller = controllers.get_mut(id as usize).unwrap();
                 controller.process_message(sid, data);
-                let icon = controller.get_icon();
-                let state = controller.get_display_state();
-                let message = DisplayCommand::DisplayState(state, icon, id);
-                display.send(message).unwrap();
+                update_controller(id, controller.as_ref(), blank);
             }
-            messages::Message::MqttConnect => {}
-            messages::Message::MqttDisconnect => {
-                for (id, controller) in controllers.iter_mut().enumerate() {
+            Message::MqttConnect => {
+                info!("Got connected");
+            }
+            Message::MqttDisconnect => {
+                info!("Got disconnected");
+                for controller in controllers.iter_mut() {
                     controller.process_disconnected();
-                    let state = controller.get_display_state();
-                    let icon = controller.get_icon();
-                    let message = DisplayCommand::DisplayState(state, icon, id as u32);
-                    display.send(message).unwrap();
                 }
+                update_displays(&controllers, blank);
             }
-            messages::Message::ButtonPress(id) => {
+            Message::ButtonPress(id) => {
+                info!("Got button {} press", id);
+                do_unblank(&controllers, &mut timer, &mut blank);
+
                 let controller = controllers.get_mut(id as usize).unwrap();
                 let commands = controller.get_press_commands();
                 for command in commands {
                     let topic = command.get_topic();
                     let data = command.get_message();
-                    info!("press {}: {}", topic, data);
+                    info!("Send {}: {}", topic, data);
                     mqtt.publish(&topic, false, &data);
                 }
             }
-            messages::Message::ButtonRelease(_id) => {}
+            Message::ButtonRelease(id) => {
+                info!("Got button {} release", id);
+                do_unblank(&controllers, &mut timer, &mut blank);
+            }
+            Message::BlankDisplays => {
+                do_blank(&mut timer, &mut blank);
+            }
         }
     }
 

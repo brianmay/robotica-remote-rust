@@ -8,4 +8,5 @@ pub enum DisplayCommand {
         button_controllers::Icon,
         u32,
     ),
+    BlankAll,
 }

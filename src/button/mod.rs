@@ -5,8 +5,6 @@ use embedded_hal::digital::blocking::InputPin;
 use esp_idf_sys::EspError;
 use std::thread;
 
-use log::*;
-
 use crate::messages;
 
 pub struct Button<T: InputPin> {
@@ -69,18 +67,14 @@ impl<T: 'static + InputPin<Error = EspError> + Send> Button<T> {
             let frequency = self.pin.get_sample_frequency();
             let duration = std::time::Duration::new(0, 1_000_000_000 / frequency as u32);
 
-            info!("Button listening for messages");
-
             loop {
                 thread::sleep(duration);
 
                 match self.poll() {
                     Some(ButtonEvent::Press) => {
-                        log::info!("button pressed");
                         tx.send(messages::Message::ButtonPress(self.id)).unwrap();
                     }
                     Some(ButtonEvent::Release) => {
-                        log::info!("button released");
                         tx.send(messages::Message::ButtonRelease(self.id)).unwrap();
                     }
                     _ => {}
