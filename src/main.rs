@@ -101,6 +101,68 @@ impl RequestedDisplayStatus {
     }
 }
 
+fn update_display(
+    display: &mpsc::Sender<DisplayCommand>,
+    id: u32,
+    controller: &dyn button_controllers::Controller,
+    status: &ActualDisplayStatus,
+) {
+    let state = controller.get_display_state();
+    let icon = controller.get_icon();
+    if status.display_on {
+        let message = DisplayCommand::DisplayState(state, icon, id as u32);
+        display.send(message).unwrap();
+    }
+}
+
+fn update_displays(
+    display: &mpsc::Sender<DisplayCommand>,
+    controllers: &[Box<dyn button_controllers::Controller>],
+    status: &ActualDisplayStatus,
+) {
+    for (id, controller) in controllers.iter().enumerate() {
+        update_display(display, id as u32, controller.as_ref(), status);
+    }
+}
+
+fn do_blank(
+    display: &mpsc::Sender<DisplayCommand>,
+    controllers: &[Box<dyn button_controllers::Controller>],
+    timer: &mut EspTimer,
+    requested_display_status: &RequestedDisplayStatus,
+    status: &mut ActualDisplayStatus,
+) {
+    let timer_required = requested_display_status.get_timer_required();
+    let display_required = requested_display_status.get_display_required();
+
+    match (timer_required, status.timer_on) {
+        (true, false) => {
+            timer.cancel().unwrap();
+            timer.after(std::time::Duration::new(10, 0)).unwrap();
+            status.timer_on = true;
+        }
+        (false, true) => {
+            timer.cancel().unwrap();
+            status.timer_on = false;
+        }
+        (true, true) => {}
+        (false, false) => {}
+    };
+
+    match (display_required, status.display_on) {
+        (true, false) => {
+            status.display_on = true;
+            update_displays(display, controllers, status);
+        }
+        (false, true) => {
+            status.display_on = false;
+            display.send(DisplayCommand::BlankAll).unwrap();
+        }
+        (true, true) => {}
+        (false, false) => {}
+    };
+}
+
 fn main() -> Result<()> {
     boards::lca2021_badge::initialize();
 
@@ -134,58 +196,6 @@ fn main() -> Result<()> {
         },
     );
 
-    let update_controller =
-        |id: u32, controller: &dyn button_controllers::Controller, status: &ActualDisplayStatus| {
-            let state = controller.get_display_state();
-            let icon = controller.get_icon();
-            if status.display_on {
-                let message = DisplayCommand::DisplayState(state, icon, id as u32);
-                display.send(message).unwrap();
-            }
-        };
-
-    let update_displays = |controllers: &Vec<Box<dyn button_controllers::Controller>>,
-                           status: &ActualDisplayStatus| {
-        for (id, controller) in controllers.iter().enumerate() {
-            update_controller(id as u32, controller.as_ref(), status);
-        }
-    };
-
-    let do_blank = |controllers: &Vec<Box<dyn button_controllers::Controller>>,
-                    timer: &mut EspTimer,
-                    requested_display_status: &RequestedDisplayStatus,
-                    status: &mut ActualDisplayStatus| {
-        let timer_required = requested_display_status.get_timer_required();
-        let display_required = requested_display_status.get_display_required();
-
-        match (timer_required, status.timer_on) {
-            (true, false) => {
-                timer.cancel().unwrap();
-                timer.after(std::time::Duration::new(10, 0)).unwrap();
-                status.timer_on = true;
-            }
-            (false, true) => {
-                timer.cancel().unwrap();
-                status.timer_on = false;
-            }
-            (true, true) => {}
-            (false, false) => {}
-        };
-
-        match (display_required, status.display_on) {
-            (true, false) => {
-                status.display_on = true;
-                update_displays(controllers, status);
-            }
-            (false, true) => {
-                status.display_on = false;
-                display.send(DisplayCommand::BlankAll).unwrap();
-            }
-            (true, true) => {}
-            (false, false) => {}
-        };
-    };
-
     let mut timer_service = EspTimerService::new().unwrap();
     let mut timer = timer_service
         .timer(move || {
@@ -215,6 +225,7 @@ fn main() -> Result<()> {
                     _ => RequestedDisplayStatus::Day,
                 };
                 do_blank(
+                    &display,
                     &controllers,
                     &mut timer,
                     &requested_display_status,
@@ -227,7 +238,7 @@ fn main() -> Result<()> {
                 let sid = label.subscription_id;
                 let controller = controllers.get_mut(id as usize).unwrap();
                 controller.process_message(sid, data);
-                update_controller(id, controller.as_ref(), &status);
+                update_display(&display, id, controller.as_ref(), &status);
             }
             Message::MqttConnect => {
                 info!("Got connected");
@@ -237,12 +248,13 @@ fn main() -> Result<()> {
                 for controller in controllers.iter_mut() {
                     controller.process_disconnected();
                 }
-                update_displays(&controllers, &status);
+                update_displays(&display, &controllers, &status);
             }
             Message::ButtonPress(id) => {
                 info!("Got button {} press", id);
                 requested_display_status.reset_timer();
                 do_blank(
+                    &display,
                     &controllers,
                     &mut timer,
                     &requested_display_status,
@@ -262,6 +274,7 @@ fn main() -> Result<()> {
                 info!("Got button {} release", id);
                 requested_display_status.reset_timer();
                 do_blank(
+                    &display,
                     &controllers,
                     &mut timer,
                     &requested_display_status,
@@ -272,6 +285,7 @@ fn main() -> Result<()> {
                 info!("Got blank display timer");
                 requested_display_status.got_timer();
                 do_blank(
+                    &display,
                     &controllers,
                     &mut timer,
                     &requested_display_status,
