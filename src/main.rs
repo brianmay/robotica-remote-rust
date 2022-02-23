@@ -220,9 +220,11 @@ fn main() -> Result<()> {
                     subscription_id: _,
                 },
             ) => {
-                requested_display_status = match power.as_str() {
-                    "ON" => RequestedDisplayStatus::Night(status.display_on),
-                    _ => RequestedDisplayStatus::Day,
+                requested_display_status = match (&requested_display_status, power.as_str()) {
+                    (RequestedDisplayStatus::Day, "ON") => RequestedDisplayStatus::Night(false),
+                    (_, "ON") => requested_display_status,
+                    (_, "OFF") => RequestedDisplayStatus::Day,
+                    (_, _) => requested_display_status,
                 };
                 do_blank(
                     &display,
