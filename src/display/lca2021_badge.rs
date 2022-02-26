@@ -151,7 +151,7 @@ pub fn connect(
             display0.flush().unwrap();
 
             let number = number + 1;
-            page_draw(&mut display1, &pages[1][page_number], number,  blanked);
+            page_draw(&mut display1, &pages[1][page_number], number, blanked);
             display1.flush().unwrap();
         }
     })?;

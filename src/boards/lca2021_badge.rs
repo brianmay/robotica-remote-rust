@@ -15,7 +15,6 @@ use crate::wifi;
 pub const NUM_COLUMNS: u32 = display::lca2021_badge::NUM_COLUMNS;
 // pub const NUM_PAGES: u32 = display::lca2021_badge::NUM_PAGES;
 
-
 pub fn configure_devices(
     tx: mpsc::Sender<messages::Message>,
 ) -> Result<(Box<dyn wifi::Wifi>, mpsc::Sender<display::DisplayCommand>)> {

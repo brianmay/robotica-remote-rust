@@ -8,10 +8,8 @@ use crate::wifi;
 
 mod lca2021_badge;
 
-
 pub const NUM_COLUMNS: u32 = lca2021_badge::NUM_COLUMNS;
 // pub const NUM_PAGES: u32 = lca2021_badge::NUM_PAGES;
-
 
 pub fn configure_devices(
     tx: mpsc::Sender<messages::Message>,

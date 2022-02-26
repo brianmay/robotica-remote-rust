@@ -162,7 +162,6 @@ impl<T: InputPin<Error = impl Debug + Display>> Debouncer<T> {
     }
 }
 
-
 pub fn configure_button<T: 'static + InputPin<Error = impl Debug + Display> + Send>(
     pin: T,
     tx: messages::Sender,
