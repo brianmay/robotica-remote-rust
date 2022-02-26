@@ -170,8 +170,8 @@ pub fn configure_button<T: 'static + InputPin<Error = impl Debug + Display> + Se
     let frequency = 100;
 
     let debounced_encoder_pin = Debouncer::new(pin, Active::Low, 30, frequency);
-    let encoder_button_1 = Button::new(debounced_encoder_pin, id);
-    encoder_button_1.connect(tx);
+    let encoder_button = Button::new(debounced_encoder_pin, id);
+    encoder_button.connect(tx);
 
     Ok(())
 }
