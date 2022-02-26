@@ -1,9 +1,7 @@
 use std::sync::mpsc;
 use std::thread;
 
-use log::*;
-
-use anyhow::Error;
+use anyhow::Result;
 
 use display_interface::DisplayError;
 
@@ -26,10 +24,11 @@ use tinytga::DynamicTga;
 
 use crate::button_controllers;
 use crate::button_controllers::DisplayState;
+use crate::button_controllers::Icon;
+use crate::messages::Message;
+use crate::messages::Sender;
 
 use crate::display::DisplayCommand;
-
-type Result<T, E = Error> = core::result::Result<T, E>;
 
 // pub fn get_displays<D>(
 //     i2c: i2c::I2C0,
@@ -58,12 +57,24 @@ type Result<T, E = Error> = core::result::Result<T, E>;
 //     Ok(display)
 // }
 
+struct Page {
+    state: DisplayState,
+    icon: Icon,
+}
+
+pub const NUM_COLUMNS: u32 = 2;
+pub const NUM_PAGES: u32 = 4;
+
 pub fn connect(
     i2c: i2c::I2C0,
     scl: gpio::Gpio4<gpio::Unknown>,
     sda: gpio::Gpio5<gpio::Unknown>,
+    tx_main: Sender,
 ) -> Result<mpsc::Sender<DisplayCommand>> {
     let (tx, rx) = mpsc::channel();
+    let mut pages: [[Option<Page>; NUM_PAGES as usize]; NUM_COLUMNS as usize] = Default::default();
+    let mut page_number: usize = 0;
+    let mut blanked = false;
 
     let config = <i2c::config::MasterConfig as Default>::default().baudrate(400.kHz().into());
     let xxx =
@@ -71,6 +82,10 @@ pub fn connect(
     let bus = shared_bus::BusManagerSimple::new(xxx);
 
     let builder = thread::Builder::new().stack_size(8 * 1024);
+
+    tx_main
+        .send(Message::DisplayPage(page_number as u32))
+        .unwrap();
 
     builder.spawn(move || {
         let di0 = ssd1306::I2CDisplayInterface::new_custom_address(bus.acquire_i2c(), 0x3C);
@@ -102,35 +117,66 @@ pub fn connect(
         for received in rx {
             match received {
                 DisplayCommand::DisplayState(state, icon, id) => {
-                    let display_or_none = match id {
-                        0 => Some(&mut display0),
-                        1 => Some(&mut display1),
-                        _ => None,
-                    };
-
-                    if let Some(display) = display_or_none {
-                        let image_category = get_image_category(&state);
-                        let image_data = get_image_data(image_category, icon);
-                        led_clear(display);
-                        led_draw_image(display, image_data);
-                        led_draw_overlay(display, &state);
-                        display.flush().unwrap();
-                    } else {
-                        error!("Display {} does not exist", id);
-                    }
+                    let column: usize = (id % NUM_COLUMNS) as usize;
+                    let page = Page { state, icon };
+                    let number: usize = (id / NUM_COLUMNS) as usize;
+                    pages[column][number] = Some(page);
                 }
                 DisplayCommand::BlankAll => {
-                    led_clear(&mut display0);
-                    display0.flush().unwrap();
-
-                    led_clear(&mut display1);
-                    display1.flush().unwrap();
+                    blanked = true;
+                }
+                DisplayCommand::UnBlankAll => {
+                    blanked = false;
+                }
+                DisplayCommand::PageUp => {
+                    if page_number + 1 < NUM_PAGES as usize {
+                        page_number += 1
+                    };
+                    tx_main
+                        .send(Message::DisplayPage(page_number as u32))
+                        .unwrap();
+                }
+                DisplayCommand::PageDown => {
+                    if page_number > 0 {
+                        page_number -= 1
+                    };
+                    tx_main
+                        .send(Message::DisplayPage(page_number as u32))
+                        .unwrap();
                 }
             }
+
+            let number = page_number * NUM_COLUMNS as usize;
+            page_draw(&mut display0, &pages[0][page_number], number, blanked);
+            display0.flush().unwrap();
+
+            let number = number + 1;
+            page_draw(&mut display1, &pages[1][page_number], number,  blanked);
+            display1.flush().unwrap();
         }
     })?;
 
     Ok(tx)
+}
+
+fn page_draw<D>(display: &mut D, page_or_none: &Option<Page>, number: usize, blanked: bool)
+where
+    D: DrawTarget<Error = DisplayError, Color = BinaryColor> + Dimensions,
+    D::Color: From<Rgb565>,
+{
+    if blanked {
+        led_clear(display);
+    } else if let Some(page) = page_or_none {
+        let image_category = get_image_category(&page.state);
+        let image_data = get_image_data(&image_category, &page.icon);
+        led_clear(display);
+        led_draw_image(display, image_data);
+        led_draw_overlay(display, &page.state);
+        led_draw_number(display, number);
+    } else {
+        led_clear(display);
+        led_draw_number(display, number);
+    }
 }
 
 fn led_clear<D>(display: &mut D)
@@ -168,6 +214,22 @@ where
     .unwrap();
 }
 
+fn led_draw_number<D>(display: &mut D, number: usize)
+where
+    D: DrawTarget<Error = DisplayError> + Dimensions,
+    D::Color: From<Rgb565>,
+{
+    let t = format!("{}", number);
+
+    Text::new(
+        &t,
+        Point::new(0, 14),
+        MonoTextStyle::new(&FONT_10X20, Rgb565::WHITE.into()),
+    )
+    .draw(display)
+    .unwrap();
+}
+
 enum ImageCategory {
     HardOff,
     On,
@@ -187,8 +249,8 @@ fn get_image_category(state: &DisplayState) -> ImageCategory {
 }
 
 fn get_image_data<'a>(
-    image: ImageCategory,
-    icon: button_controllers::Icon,
+    image: &ImageCategory,
+    icon: &button_controllers::Icon,
 ) -> DynamicTga<'a, BinaryColor> {
     let data = match icon {
         button_controllers::Icon::Light => match image {

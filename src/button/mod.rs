@@ -1,16 +1,25 @@
-// Copied and adapted from https://github.com/tonarino/panel-firmware/blob/main/src/button.rs
-pub mod esp;
+// Adapted from https://github.com/tonarino/panel-firmware/blob/85540942acba71717b568b2d775ac1c21e0b199f/src/button.rs
+use std::fmt::Debug;
+use std::fmt::Display;
+
+use anyhow::Result;
 
 use embedded_hal::digital::blocking::InputPin;
-use esp_idf_sys::EspError;
 use std::thread;
 
 use crate::messages;
 
+#[derive(Clone)]
+pub enum ButtonId {
+    Controller(u32),
+    PageUp,
+    PageDown,
+}
+
 pub struct Button<T: InputPin> {
     pin: Debouncer<T>,
     button_state: ButtonState,
-    id: u32,
+    id: ButtonId,
 }
 
 pub enum ButtonEvent {
@@ -26,8 +35,8 @@ enum ButtonState {
     Pressed,
 }
 
-impl<T: 'static + InputPin<Error = EspError> + Send> Button<T> {
-    pub fn new(pin: Debouncer<T>, id: u32) -> Self {
+impl<T: 'static + InputPin<Error = impl Debug + Display> + Send> Button<T> {
+    pub fn new(pin: Debouncer<T>, id: ButtonId) -> Self {
         let button_state = ButtonState::Released;
 
         Self {
@@ -72,10 +81,12 @@ impl<T: 'static + InputPin<Error = EspError> + Send> Button<T> {
 
                 match self.poll() {
                     Some(ButtonEvent::Press) => {
-                        tx.send(messages::Message::ButtonPress(self.id)).unwrap();
+                        tx.send(messages::Message::ButtonPress(self.id.clone()))
+                            .unwrap();
                     }
                     Some(ButtonEvent::Release) => {
-                        tx.send(messages::Message::ButtonRelease(self.id)).unwrap();
+                        tx.send(messages::Message::ButtonRelease(self.id.clone()))
+                            .unwrap();
                     }
                     _ => {}
                 }
@@ -101,7 +112,7 @@ pub enum Active {
     High,
 }
 
-impl<T: InputPin<Error = EspError>> Debouncer<T> {
+impl<T: InputPin<Error = impl Debug + Display>> Debouncer<T> {
     pub fn new(pin: T, active_mode: Active, debounce_time_ms: u16, sample_frequency: u16) -> Self {
         let max = ((debounce_time_ms as f32 / 1000.0) * sample_frequency as f32) as u8;
 
@@ -149,4 +160,19 @@ impl<T: InputPin<Error = EspError>> Debouncer<T> {
     pub fn get_sample_frequency(&self) -> u16 {
         self.sample_frequency
     }
+}
+
+
+pub fn configure_button<T: 'static + InputPin<Error = impl Debug + Display> + Send>(
+    pin: T,
+    tx: messages::Sender,
+    id: ButtonId,
+) -> Result<()> {
+    let frequency = 100;
+
+    let debounced_encoder_pin = Debouncer::new(pin, Active::Low, 30, frequency);
+    let encoder_button_1 = Button::new(debounced_encoder_pin, id);
+    encoder_button_1.connect(tx);
+
+    Ok(())
 }

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::sync::mpsc;
 use std::thread;
 
-use anyhow::Error;
+use anyhow::Result;
 
 use embedded_svc::mqtt::client::{Client, Details, Event, Message, Publish, QoS};
 
@@ -12,8 +12,6 @@ use esp_idf_sys::EspError;
 use log::*;
 
 use crate::messages;
-
-type Result<T, E = Error> = core::result::Result<T, E>;
 
 #[derive(Clone)]
 pub enum Label {

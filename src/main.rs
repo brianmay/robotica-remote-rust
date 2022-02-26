@@ -4,7 +4,7 @@
 use std::env;
 use std::sync::mpsc;
 
-use anyhow::Error;
+use anyhow::Result;
 use embedded_svc::timer::OnceTimer;
 use embedded_svc::timer::Timer;
 use embedded_svc::timer::TimerService;
@@ -13,6 +13,7 @@ use esp_idf_svc::timer::EspTimerService;
 use log::*;
 
 mod button;
+use button::ButtonId;
 
 mod button_controllers;
 
@@ -27,6 +28,7 @@ mod wifi;
 mod config;
 mod messages;
 mod mqtt;
+mod touch;
 
 const MQTT_URL: &str = env!("MQTT_URL");
 
@@ -35,8 +37,6 @@ include!(env!("EMBUILD_GENERATED_SYMBOLS_FILE"));
 
 #[cfg(esp32s2)]
 const ULP: &[u8] = include_bytes!(env!("EMBUILD_GENERATED_BIN_FILE"));
-
-type Result<T, E = Error> = core::result::Result<T, E>;
 
 enum RequestedDisplayStatus {
     Day,
@@ -99,7 +99,6 @@ fn update_displays(
 
 fn do_blank(
     display: &mpsc::Sender<DisplayCommand>,
-    controllers: &[Box<dyn button_controllers::Controller>],
     timer: &mut EspTimer,
     requested_display_status: &RequestedDisplayStatus,
     status: &mut ActualDisplayStatus,
@@ -109,11 +108,13 @@ fn do_blank(
 
     match (timer_required, status.timer_on) {
         (true, false) => {
+            info!("starting blank timer");
             timer.cancel().unwrap();
             timer.after(std::time::Duration::new(10, 0)).unwrap();
             status.timer_on = true;
         }
         (false, true) => {
+            info!("stopping blank timer");
             timer.cancel().unwrap();
             status.timer_on = false;
         }
@@ -123,10 +124,12 @@ fn do_blank(
 
     match (display_required, status.display_on) {
         (true, false) => {
+            info!("turning display on");
             status.display_on = true;
-            update_displays(display, controllers, status);
+            display.send(DisplayCommand::UnBlankAll).unwrap();
         }
         (false, true) => {
+            info!("turning display off");
             status.display_on = false;
             display.send(DisplayCommand::BlankAll).unwrap();
         }
@@ -136,11 +139,11 @@ fn do_blank(
 }
 
 fn main() -> Result<()> {
-    boards::lca2021_badge::initialize();
+    boards::initialize();
 
     let (tx, rx) = mpsc::channel();
 
-    let (_wifi, display) = boards::lca2021_badge::configure_devices(tx.clone())?;
+    let (_wifi, display) = boards::configure_devices(tx.clone())?;
 
     let config_list = config::get_controllers_config();
 
@@ -172,6 +175,8 @@ fn main() -> Result<()> {
         timer_on: false,
     };
 
+    let mut page = 0;
+
     for received in rx {
         match received {
             Message::MqttReceived(_, power, mqtt::Label::NightStatus) => {
@@ -181,13 +186,7 @@ fn main() -> Result<()> {
                     (_, "OFF") => RequestedDisplayStatus::Day,
                     (_, _) => requested_display_status,
                 };
-                do_blank(
-                    &display,
-                    &controllers,
-                    &mut timer,
-                    &requested_display_status,
-                    &mut status,
-                );
+                do_blank(&display, &mut timer, &requested_display_status, &mut status);
             }
             Message::MqttReceived(topic, data, mqtt::Label::Button(id, sid)) => {
                 info!("Got message: {} - {}", topic, data);
@@ -205,16 +204,9 @@ fn main() -> Result<()> {
                 }
                 update_displays(&display, &controllers, &status);
             }
-            Message::ButtonPress(id) => {
+            Message::ButtonPress(ButtonId::Controller(id)) => {
+                let id = id + page * boards::NUM_COLUMNS;
                 info!("Got button {} press", id);
-                requested_display_status.reset_timer();
-                do_blank(
-                    &display,
-                    &controllers,
-                    &mut timer,
-                    &requested_display_status,
-                    &mut status,
-                );
 
                 let controller_or_none = controllers.get_mut(id as usize);
                 if let Some(controller) = controller_or_none {
@@ -228,28 +220,34 @@ fn main() -> Result<()> {
                 } else {
                     error!("Controller for button {} does not exist", id);
                 }
-            }
-            Message::ButtonRelease(id) => {
-                info!("Got button {} release", id);
+
                 requested_display_status.reset_timer();
-                do_blank(
-                    &display,
-                    &controllers,
-                    &mut timer,
-                    &requested_display_status,
-                    &mut status,
-                );
+                do_blank(&display, &mut timer, &requested_display_status, &mut status);
+            }
+            Message::ButtonPress(ButtonId::PageUp) => {
+                info!("got page up");
+                display.send(DisplayCommand::PageUp).unwrap();
+                requested_display_status.reset_timer();
+                do_blank(&display, &mut timer, &requested_display_status, &mut status);
+            }
+            Message::ButtonPress(ButtonId::PageDown) => {
+                info!("got page down");
+                display.send(DisplayCommand::PageDown).unwrap();
+                requested_display_status.reset_timer();
+                do_blank(&display, &mut timer, &requested_display_status, &mut status);
+            }
+            Message::ButtonRelease(_id) => {
+                info!("Got button release");
+                requested_display_status.reset_timer();
+                do_blank(&display, &mut timer, &requested_display_status, &mut status);
             }
             Message::BlankDisplays => {
                 info!("Got blank display timer");
                 requested_display_status.got_timer();
-                do_blank(
-                    &display,
-                    &controllers,
-                    &mut timer,
-                    &requested_display_status,
-                    &mut status,
-                );
+                do_blank(&display, &mut timer, &requested_display_status, &mut status);
+            }
+            Message::DisplayPage(number) => {
+                page = number;
             }
         }
     }

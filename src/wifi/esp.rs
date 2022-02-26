@@ -9,14 +9,12 @@ use esp_idf_svc::sysloop::*;
 use esp_idf_svc::wifi::*;
 
 use anyhow::bail;
-use anyhow::Error;
+use anyhow::Result;
 
 use log::*;
 
 const SSID: &str = env!("WIFI_SSID");
 const PASS: &str = env!("WIFI_PASS");
-
-type Result<T, E = Error> = core::result::Result<T, E>;
 
 #[allow(dead_code)]
 pub struct MyWifi {

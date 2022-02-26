@@ -9,4 +9,7 @@ pub enum DisplayCommand {
         u32,
     ),
     BlankAll,
+    UnBlankAll,
+    PageUp,
+    PageDown,
 }
