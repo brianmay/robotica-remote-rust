@@ -71,6 +71,9 @@ fn get_client(url: &str, tx: mpsc::Sender<MqttCommand>) -> Result<EspMqttClient,
             Ok(Event::Disconnected) => {
                 tx.send(MqttCommand::MqttDisconnect).unwrap();
             }
+            Ok(Event::Subscribed(_x)) => {
+                // Do nothing
+            }
             Ok(event) => info!("Got unknown MQTT event {:?}", event_to_string(event)),
         }
     };

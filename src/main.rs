@@ -156,6 +156,7 @@ fn main() -> Result<()> {
         let subscriptions = f.get_subscriptions();
         for s in subscriptions {
             let label = mqtt::Label::Button(index as u32, s.label);
+            info!("Subscribing to {}.", s.topic);
             mqtt.subscribe(&s.topic, label);
         }
     }
