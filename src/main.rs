@@ -175,6 +175,8 @@ fn main() -> Result<()> {
         timer_on: false,
     };
 
+    update_displays(&display, &controllers, &status);
+
     let mut page = 0;
 
     for received in rx {
