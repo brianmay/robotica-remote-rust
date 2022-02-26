@@ -165,7 +165,6 @@ fn main() -> Result<()> {
             tx.send(Message::BlankDisplays).unwrap();
         })
         .unwrap();
-    timer.after(std::time::Duration::new(10, 0)).unwrap();
 
     let mut requested_display_status: RequestedDisplayStatus = RequestedDisplayStatus::Day;
     let mut status: ActualDisplayStatus = ActualDisplayStatus {
