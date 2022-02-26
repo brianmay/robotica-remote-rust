@@ -1,6 +1,8 @@
 use std::sync::mpsc;
 use std::thread;
 
+use log::*;
+
 use anyhow::Error;
 
 use display_interface::DisplayError;
@@ -91,8 +93,8 @@ pub fn connect(
         display0.init().unwrap();
         display1.init().unwrap();
 
-        led_draw_loading(&mut display0).unwrap();
-        led_draw_loading(&mut display1).unwrap();
+        led_draw_loading(&mut display0);
+        led_draw_loading(&mut display1);
 
         display0.flush().unwrap();
         display1.flush().unwrap();
@@ -100,24 +102,28 @@ pub fn connect(
         for received in rx {
             match received {
                 DisplayCommand::DisplayState(state, icon, id) => {
-                    let display = match id {
-                        0 => &mut display0,
-                        1 => &mut display1,
-                        _ => panic!("Invalid display value received"),
+                    let display_or_none = match id {
+                        0 => Some(&mut display0),
+                        1 => Some(&mut display1),
+                        _ => None,
                     };
 
-                    let image_category = get_image_category(&state);
-                    let image_data = get_image_data(image_category, icon);
-                    led_clear(display).unwrap();
-                    led_draw_image(display, image_data).unwrap();
-                    led_draw_overlay(display, &state).unwrap();
-                    display.flush().unwrap();
+                    if let Some(display) = display_or_none {
+                        let image_category = get_image_category(&state);
+                        let image_data = get_image_data(image_category, icon);
+                        led_clear(display);
+                        led_draw_image(display, image_data);
+                        led_draw_overlay(display, &state);
+                        display.flush().unwrap();
+                    } else {
+                        error!("Display {} does not exist", id);
+                    }
                 }
                 DisplayCommand::BlankAll => {
-                    led_clear(&mut display0).unwrap();
+                    led_clear(&mut display0);
                     display0.flush().unwrap();
 
-                    led_clear(&mut display1).unwrap();
+                    led_clear(&mut display1);
                     display1.flush().unwrap();
                 }
             }
@@ -127,16 +133,15 @@ pub fn connect(
     Ok(tx)
 }
 
-fn led_clear<D>(display: &mut D) -> Result<(), D::Error>
+fn led_clear<D>(display: &mut D)
 where
     D: DrawTarget<Error = DisplayError> + Dimensions,
     D::Color: From<Rgb565>,
 {
     display.clear(Rgb565::BLACK.into()).unwrap();
-    Ok(())
 }
 
-fn led_draw_loading<D>(display: &mut D) -> Result<(), D::Error>
+fn led_draw_loading<D>(display: &mut D)
 where
     D: DrawTarget<Error = DisplayError> + Dimensions,
     D::Color: From<Rgb565>,
@@ -161,8 +166,6 @@ where
     )
     .draw(display)
     .unwrap();
-
-    Ok(())
 }
 
 enum ImageCategory {
@@ -205,7 +208,7 @@ fn get_image_data<'a>(
     DynamicTga::from_slice(data).unwrap()
 }
 
-fn led_draw_image<D>(display: &mut D, tga: DynamicTga<BinaryColor>) -> Result<(), D::Error>
+fn led_draw_image<D>(display: &mut D, tga: DynamicTga<BinaryColor>)
 where
     D: DrawTarget<Error = DisplayError, Color = BinaryColor> + Dimensions,
     D::Color: From<Rgb565>,
@@ -218,11 +221,9 @@ where
     let y = center.y - size.height as i32 / 2;
 
     Image::new(&tga, Point::new(x, y)).draw(display).unwrap();
-
-    Ok(())
 }
 
-fn led_draw_overlay<D>(display: &mut D, state: &DisplayState) -> Result<(), D::Error>
+fn led_draw_overlay<D>(display: &mut D, state: &DisplayState)
 where
     D: DrawTarget<Error = DisplayError, Color = BinaryColor> + Dimensions,
     D::Color: From<Rgb565>,
@@ -266,6 +267,4 @@ where
         .draw(display)
         .unwrap();
     }
-
-    Ok(())
 }

@@ -217,13 +217,17 @@ fn main() -> Result<()> {
                     &mut status,
                 );
 
-                let controller = controllers.get_mut(id as usize).unwrap();
-                let commands = controller.get_press_commands();
-                for command in commands {
-                    let topic = command.get_topic();
-                    let data = command.get_message();
-                    info!("Send {}: {}", topic, data);
-                    mqtt.publish(&topic, false, &data);
+                let controller_or_none = controllers.get_mut(id as usize);
+                if let Some(controller) = controller_or_none {
+                    let commands = controller.get_press_commands();
+                    for command in commands {
+                        let topic = command.get_topic();
+                        let data = command.get_message();
+                        info!("Send {}: {}", topic, data);
+                        mqtt.publish(&topic, false, &data);
+                    }
+                } else {
+                    error!("Controller for button {} does not exist", id);
                 }
             }
             Message::ButtonRelease(id) => {
