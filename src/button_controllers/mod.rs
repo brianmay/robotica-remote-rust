@@ -57,6 +57,7 @@ pub trait Config {
 pub enum Icon {
     Light,
     Fan,
+    WakeUp,
 }
 #[derive(Clone)]
 pub struct CommonConfig {

@@ -1,7 +1,7 @@
 #!/bin/sh
 set -ex
 
-cd src/images
+cd src/display/images
 
 do_image() {
     image="$1"
@@ -18,3 +18,8 @@ do_image fan_off black
 do_image fan_hard_off black
 do_image fan_on white
 do_image fan_on_other black
+
+do_image wake_up_off black
+do_image wake_up_hard_off black
+do_image wake_up_on white
+do_image wake_up_on_other black

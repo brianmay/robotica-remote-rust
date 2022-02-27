@@ -265,6 +265,16 @@ fn get_image_data<'a>(
             ImageCategory::Off => include_bytes!("images/fan_off_64x64.tga").as_slice(),
             ImageCategory::OnOther => include_bytes!("images/fan_on_other_64x64.tga").as_slice(),
         },
+        button_controllers::Icon::WakeUp => match image {
+            ImageCategory::HardOff => {
+                include_bytes!("images/wake_up_hard_off_64x64.tga").as_slice()
+            }
+            ImageCategory::On => include_bytes!("images/wake_up_on_64x64.tga").as_slice(),
+            ImageCategory::Off => include_bytes!("images/wake_up_off_64x64.tga").as_slice(),
+            ImageCategory::OnOther => {
+                include_bytes!("images/wake_up_on_other_64x64.tga").as_slice()
+            }
+        },
     };
 
     DynamicTga::from_slice(data).unwrap()
