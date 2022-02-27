@@ -5,6 +5,7 @@ use anyhow::Result;
 
 use display_interface::DisplayError;
 
+use embedded_graphics::mono_font::ascii::FONT_5X8;
 use ssd1306;
 use ssd1306::mode::DisplayConfig;
 
@@ -57,9 +58,10 @@ use crate::display::DisplayCommand;
 //     Ok(display)
 // }
 
-struct Page {
+struct State {
     state: DisplayState,
     icon: Icon,
+    name: String,
 }
 
 pub const NUM_COLUMNS: u32 = 2;
@@ -72,7 +74,7 @@ pub fn connect(
     tx_main: Sender,
 ) -> Result<mpsc::Sender<DisplayCommand>> {
     let (tx, rx) = mpsc::channel();
-    let mut pages: [[Option<Page>; NUM_PAGES as usize]; NUM_COLUMNS as usize] = Default::default();
+    let mut pages: [[Option<State>; NUM_PAGES as usize]; NUM_COLUMNS as usize] = Default::default();
     let mut page_number: usize = 0;
 
     let config = <i2c::config::MasterConfig as Default>::default().baudrate(400.kHz().into());
@@ -115,9 +117,9 @@ pub fn connect(
 
         for received in rx {
             match received {
-                DisplayCommand::DisplayState(state, icon, id) => {
+                DisplayCommand::DisplayState(state, icon, id, name) => {
                     let column: usize = (id % NUM_COLUMNS) as usize;
-                    let page = Page { state, icon };
+                    let page = State { state, icon, name };
                     let number: usize = (id / NUM_COLUMNS) as usize;
                     pages[column][number] = Some(page);
                 }
@@ -160,22 +162,22 @@ pub fn connect(
     Ok(tx)
 }
 
-fn page_draw<D>(display: &mut D, page_or_none: &Option<Page>, number: usize)
+fn page_draw<D>(display: &mut D, page_or_none: &Option<State>, number: usize)
 where
     D: DrawTarget<Error = DisplayError, Color = BinaryColor> + Dimensions,
     D::Color: From<Rgb565>,
 {
+    led_clear(display);
+
     if let Some(page) = page_or_none {
         let image_category = get_image_category(&page.state);
         let image_data = get_image_data(&image_category, &page.icon);
-        led_clear(display);
         led_draw_image(display, image_data);
         led_draw_overlay(display, &page.state);
-        led_draw_number(display, number);
-    } else {
-        led_clear(display);
-        led_draw_number(display, number);
+        led_draw_name(display, &page.name);
     }
+
+    led_draw_number(display, number);
 }
 
 fn led_clear<D>(display: &mut D)
@@ -224,6 +226,20 @@ where
         &t,
         Point::new(0, 14),
         MonoTextStyle::new(&FONT_10X20, Rgb565::WHITE.into()),
+    )
+    .draw(display)
+    .unwrap();
+}
+
+fn led_draw_name<D>(display: &mut D, name: &str)
+where
+    D: DrawTarget<Error = DisplayError> + Dimensions,
+    D::Color: From<Rgb565>,
+{
+    Text::new(
+        name,
+        Point::new(0, (display.bounding_box().size.height - 4) as i32),
+        MonoTextStyle::new(&FONT_5X8, Rgb565::WHITE.into()),
     )
     .draw(display)
     .unwrap();

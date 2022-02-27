@@ -75,6 +75,7 @@ pub trait Controller {
     fn get_display_state(&self) -> DisplayState;
     fn get_press_commands(&self) -> Vec<Command>;
     fn get_icon(&self) -> Icon;
+    fn get_name(&self) -> String;
 }
 
 fn get_display_state_for_action(state: DisplayState, action: &Action) -> DisplayState {

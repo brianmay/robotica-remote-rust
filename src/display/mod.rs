@@ -7,6 +7,7 @@ pub enum DisplayCommand {
         button_controllers::DisplayState,
         button_controllers::Icon,
         u32,
+        String,
     ),
     BlankAll,
     UnBlankAll,

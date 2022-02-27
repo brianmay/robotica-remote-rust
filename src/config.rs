@@ -6,7 +6,7 @@ use crate::button_controllers::CommonConfig;
 use crate::button_controllers::Config;
 use crate::button_controllers::Icon;
 
-pub const NUM_CONTROLLERS: usize = 4;
+pub const NUM_CONTROLLERS: usize = 5;
 pub const NIGHT_TOPIC: &str = "state/Brian/Night/power";
 
 pub fn get_controllers_config() -> [Box<dyn Config>; NUM_CONTROLLERS] {
@@ -51,6 +51,15 @@ pub fn get_controllers_config() -> [Box<dyn Config>; NUM_CONTROLLERS] {
                 icon: Icon::WakeUp,
             },
             play_list: "wake_up".to_string(),
+        }),
+        Box::new(SwitchConfig {
+            c: CommonConfig {
+                name: "TV".to_string(),
+                location: "Dining".to_string(),
+                device: "TvSwitch".to_string(),
+                action: Action::Toggle,
+                icon: Icon::Fan,
+            },
         }),
     ]
 }

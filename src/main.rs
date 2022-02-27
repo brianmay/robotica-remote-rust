@@ -81,8 +81,9 @@ fn update_display(
 ) {
     let state = controller.get_display_state();
     let icon = controller.get_icon();
+    let name = controller.get_name();
     if status.display_on {
-        let message = DisplayCommand::DisplayState(state, icon, id as u32);
+        let message = DisplayCommand::DisplayState(state, icon, id as u32, name);
         display.send(message).unwrap();
     }
 }

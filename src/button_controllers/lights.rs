@@ -142,6 +142,10 @@ impl Controller for LightController {
     fn get_icon(&self) -> Icon {
         self.config.c.icon.clone()
     }
+
+    fn get_name(&self) -> String {
+        self.config.c.name.clone()
+    }
 }
 
 fn get_display_state_turn_on(lb: &LightController) -> DisplayState {

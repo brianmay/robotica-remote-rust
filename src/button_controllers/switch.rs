@@ -104,6 +104,10 @@ impl Controller for SwitchController {
     fn get_icon(&self) -> Icon {
         self.config.c.icon.clone()
     }
+
+    fn get_name(&self) -> String {
+        self.config.c.name.clone()
+    }
 }
 
 enum ButtonStateMsgType {
