@@ -255,19 +255,19 @@ fn get_image_data<'a>(
     use ImageCategory::*;
 
     let data = match icon {
-        button_controllers::Icon::Light => match image {
+        Icon::Light => match image {
             HardOff => include_bytes!("images/light_hard_off_64x64.tga").as_slice(),
             On => include_bytes!("images/light_on_64x64.tga").as_slice(),
             Off => include_bytes!("images/light_off_64x64.tga").as_slice(),
             OnOther => include_bytes!("images/light_on_other_64x64.tga").as_slice(),
         },
-        button_controllers::Icon::Fan => match image {
+        Icon::Fan => match image {
             HardOff => include_bytes!("images/fan_hard_off_64x64.tga").as_slice(),
             On => include_bytes!("images/fan_on_64x64.tga").as_slice(),
             Off => include_bytes!("images/fan_off_64x64.tga").as_slice(),
             OnOther => include_bytes!("images/fan_on_other_64x64.tga").as_slice(),
         },
-        button_controllers::Icon::WakeUp => match image {
+        Icon::WakeUp => match image {
             HardOff => include_bytes!("images/wake_up_hard_off_64x64.tga").as_slice(),
             On => include_bytes!("images/wake_up_on_64x64.tga").as_slice(),
             Off => include_bytes!("images/wake_up_off_64x64.tga").as_slice(),
