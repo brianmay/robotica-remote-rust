@@ -1,4 +1,5 @@
 pub mod lights;
+pub mod music;
 pub mod switch;
 
 use std::convert::TryFrom;
