@@ -138,6 +138,26 @@ fn do_blank(
     };
 }
 
+fn button_press(
+    controllers: &mut [Box<dyn button_controllers::Controller>],
+    id: u32,
+    mqtt: &mqtt::Mqtt,
+) {
+    info!("Got button {} press", id);
+    let controller_or_none = controllers.get_mut(id as usize);
+    if let Some(controller) = controller_or_none {
+        let commands = controller.get_press_commands();
+        for command in commands {
+            let topic = command.get_topic();
+            let data = command.get_message();
+            info!("Send {}: {}", topic, data);
+            mqtt.publish(&topic, false, &data);
+        }
+    } else {
+        error!("Controller for button {} does not exist", id);
+    }
+}
+
 fn main() -> Result<()> {
     boards::initialize();
 
@@ -207,23 +227,16 @@ fn main() -> Result<()> {
                 }
                 update_displays(&display, &controllers, &status);
             }
-            Message::ButtonPress(ButtonId::Controller(id)) => {
-                let id = id + page * boards::NUM_COLUMNS;
-                info!("Got button {} press", id);
-
-                let controller_or_none = controllers.get_mut(id as usize);
-                if let Some(controller) = controller_or_none {
-                    let commands = controller.get_press_commands();
-                    for command in commands {
-                        let topic = command.get_topic();
-                        let data = command.get_message();
-                        info!("Send {}: {}", topic, data);
-                        mqtt.publish(&topic, false, &data);
-                    }
-                } else {
-                    error!("Controller for button {} does not exist", id);
+            Message::ButtonPress(ButtonId::Physical(id)) => {
+                if status.display_on {
+                    let id = id + page * boards::NUM_COLUMNS;
+                    button_press(&mut controllers, id, &mqtt);
                 }
-
+                requested_display_status.reset_timer();
+                do_blank(&display, &mut timer, &requested_display_status, &mut status);
+            }
+            Message::ButtonPress(ButtonId::Controller(id)) => {
+                button_press(&mut controllers, id, &mqtt);
                 requested_display_status.reset_timer();
                 do_blank(&display, &mut timer, &requested_display_status, &mut status);
             }

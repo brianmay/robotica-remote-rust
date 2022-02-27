@@ -302,7 +302,7 @@ where
     let display_size = display.bounding_box();
     let center = display_size.center();
 
-    let x = center.x - size.width as i32 / 2;
+    let x = display_size.bottom_right().unwrap().x - size.width as i32;
     let y = center.y - size.height as i32 / 2;
 
     Image::new(&tga, Point::new(x, y)).draw(display).unwrap();

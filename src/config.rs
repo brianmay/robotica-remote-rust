@@ -13,7 +13,7 @@ pub fn get_controllers_config() -> [Box<dyn Config>; NUM_CONTROLLERS] {
     [
         Box::new(LightConfig {
             c: CommonConfig {
-                name: "Brian".to_string(),
+                name: "BLight".to_string(),
                 location: "Brian".to_string(),
                 device: "Light".to_string(),
                 action: Action::Toggle,
@@ -24,7 +24,7 @@ pub fn get_controllers_config() -> [Box<dyn Config>; NUM_CONTROLLERS] {
         }),
         Box::new(SwitchConfig {
             c: CommonConfig {
-                name: "Brian".to_string(),
+                name: "BFan".to_string(),
                 location: "Brian".to_string(),
                 device: "Fan".to_string(),
                 action: Action::Toggle,
@@ -44,7 +44,7 @@ pub fn get_controllers_config() -> [Box<dyn Config>; NUM_CONTROLLERS] {
         }),
         Box::new(MusicConfig {
             c: CommonConfig {
-                name: "WakeUp".to_string(),
+                name: "BWakeUp".to_string(),
                 location: "Brian".to_string(),
                 device: "Robotica".to_string(),
                 action: Action::Toggle,
