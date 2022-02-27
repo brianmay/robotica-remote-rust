@@ -107,8 +107,8 @@ fn do_blank(
     let display_required = requested_display_status.get_display_required();
 
     match (timer_required, status.timer_on) {
-        (true, false) => {
-            info!("starting blank timer");
+        (true, _) => {
+            info!("(re)starting blank timer");
             timer.cancel().unwrap();
             timer.after(std::time::Duration::new(10, 0)).unwrap();
             status.timer_on = true;
@@ -118,7 +118,6 @@ fn do_blank(
             timer.cancel().unwrap();
             status.timer_on = false;
         }
-        (true, true) => {}
         (false, false) => {}
     };
 
