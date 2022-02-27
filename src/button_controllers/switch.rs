@@ -62,13 +62,18 @@ impl Controller for SwitchController {
     }
 
     fn get_display_state(&self) -> DisplayState {
-        let action = &self.config.c.action;
+        let power = self.power.as_deref();
 
-        match action {
-            Action::TurnOn => get_display_state_turn_on(self),
-            Action::TurnOff => get_display_state_turn_off(self),
-            Action::Toggle => get_display_state_toggle(self),
-        }
+        let state = match power {
+            None => DisplayState::Unknown,
+            Some("HARD_OFF") => DisplayState::HardOff,
+            Some("ON") => DisplayState::On,
+            Some("OFF") => DisplayState::Off,
+            _ => DisplayState::Error,
+        };
+
+        let action = &self.config.c.action;
+        get_display_state_for_action(state, action)
     }
 
     fn get_press_commands(&self) -> Vec<Command> {
@@ -101,46 +106,8 @@ impl Controller for SwitchController {
     }
 }
 
-fn get_display_state_turn_on(lb: &SwitchController) -> DisplayState {
-    let power = lb.power.as_deref();
-
-    match power {
-        None => DisplayState::Unknown,
-        Some("HARD_OFF") => DisplayState::HardOff,
-        Some("ON") => DisplayState::On,
-        Some("OFF") => DisplayState::Off,
-        _ => DisplayState::Error,
-    }
-}
-
-fn get_display_state_turn_off(lb: &SwitchController) -> DisplayState {
-    let power = lb.power.as_deref();
-
-    match power {
-        None => DisplayState::Unknown,
-        Some("HARD_OFF") => DisplayState::HardOff,
-        Some("ON") => DisplayState::Off,
-        Some("OFF") => DisplayState::On,
-        _ => DisplayState::Error,
-    }
-}
-
-fn get_display_state_toggle(lb: &SwitchController) -> DisplayState {
-    let power = lb.power.as_deref();
-
-    match power {
-        None => DisplayState::Unknown,
-        Some("HARD_OFF") => DisplayState::HardOff,
-        Some("ON") => DisplayState::On,
-        Some("OFF") => DisplayState::Off,
-        _ => DisplayState::Error,
-    }
-}
-
 enum ButtonStateMsgType {
     Power,
-    Scenes,
-    Priorities,
 }
 
 impl TryFrom<u32> for ButtonStateMsgType {
@@ -149,8 +116,6 @@ impl TryFrom<u32> for ButtonStateMsgType {
     fn try_from(v: u32) -> Result<Self, Self::Error> {
         match v {
             x if x == ButtonStateMsgType::Power as u32 => Ok(ButtonStateMsgType::Power),
-            x if x == ButtonStateMsgType::Scenes as u32 => Ok(ButtonStateMsgType::Scenes),
-            x if x == ButtonStateMsgType::Priorities as u32 => Ok(ButtonStateMsgType::Priorities),
             _ => Err(()),
         }
     }

@@ -74,3 +74,18 @@ pub trait Controller {
     fn get_press_commands(&self) -> Vec<Command>;
     fn get_icon(&self) -> Icon;
 }
+
+fn get_display_state_for_action(state: DisplayState, action: &Action) -> DisplayState {
+    match action {
+        Action::TurnOn => state,
+        Action::TurnOff => match state {
+            DisplayState::HardOff => DisplayState::HardOff,
+            DisplayState::Error => DisplayState::Error,
+            DisplayState::Unknown => DisplayState::Unknown,
+            DisplayState::On => DisplayState::Off,
+            DisplayState::Off => DisplayState::On,
+            DisplayState::OnOther => DisplayState::Off,
+        },
+        Action::Toggle => state,
+    }
+}
