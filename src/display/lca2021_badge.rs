@@ -74,7 +74,6 @@ pub fn connect(
     let (tx, rx) = mpsc::channel();
     let mut pages: [[Option<Page>; NUM_PAGES as usize]; NUM_COLUMNS as usize] = Default::default();
     let mut page_number: usize = 0;
-    let mut blanked = false;
 
     let config = <i2c::config::MasterConfig as Default>::default().baudrate(400.kHz().into());
     let xxx =
@@ -123,10 +122,12 @@ pub fn connect(
                     pages[column][number] = Some(page);
                 }
                 DisplayCommand::BlankAll => {
-                    blanked = true;
+                    display0.set_display_on(false).unwrap();
+                    display1.set_display_on(false).unwrap();
                 }
                 DisplayCommand::UnBlankAll => {
-                    blanked = false;
+                    display0.set_display_on(true).unwrap();
+                    display1.set_display_on(true).unwrap();
                 }
                 DisplayCommand::PageUp => {
                     if page_number + 1 < NUM_PAGES as usize {
@@ -147,11 +148,11 @@ pub fn connect(
             }
 
             let number = page_number * NUM_COLUMNS as usize;
-            page_draw(&mut display0, &pages[0][page_number], number, blanked);
+            page_draw(&mut display0, &pages[0][page_number], number);
             display0.flush().unwrap();
 
             let number = number + 1;
-            page_draw(&mut display1, &pages[1][page_number], number, blanked);
+            page_draw(&mut display1, &pages[1][page_number], number);
             display1.flush().unwrap();
         }
     })?;
@@ -159,14 +160,12 @@ pub fn connect(
     Ok(tx)
 }
 
-fn page_draw<D>(display: &mut D, page_or_none: &Option<Page>, number: usize, blanked: bool)
+fn page_draw<D>(display: &mut D, page_or_none: &Option<Page>, number: usize)
 where
     D: DrawTarget<Error = DisplayError, Color = BinaryColor> + Dimensions,
     D::Color: From<Rgb565>,
 {
-    if blanked {
-        led_clear(display);
-    } else if let Some(page) = page_or_none {
+    if let Some(page) = page_or_none {
         let image_category = get_image_category(&page.state);
         let image_data = get_image_data(&image_category, &page.icon);
         led_clear(display);
