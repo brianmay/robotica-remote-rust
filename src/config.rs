@@ -58,7 +58,7 @@ pub fn get_controllers_config() -> [Box<dyn Config>; NUM_CONTROLLERS] {
                 location: "Dining".to_string(),
                 device: "TvSwitch".to_string(),
                 action: Action::Toggle,
-                icon: Icon::Fan,
+                icon: Icon::TV,
             },
         }),
     ]

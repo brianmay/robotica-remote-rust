@@ -64,7 +64,7 @@ impl Controller for MusicController {
             Some("ERROR") => DisplayState::Error,
             Some("STOP") => DisplayState::Off,
             Some(pl) if pl == self.config.play_list => DisplayState::On,
-            _ => DisplayState::Off,
+            _ => DisplayState::OnOther,
         };
 
         let action = &self.config.c.action;

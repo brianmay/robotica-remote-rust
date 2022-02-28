@@ -58,6 +58,7 @@ pub enum Icon {
     Light,
     Fan,
     WakeUp,
+    TV,
 }
 #[derive(Clone)]
 pub struct CommonConfig {
