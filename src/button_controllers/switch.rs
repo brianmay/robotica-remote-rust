@@ -25,7 +25,7 @@ impl SwitchController {
     }
 }
 
-fn topic(parts: &[String]) -> String {
+fn topic(parts: &[&str]) -> String {
     parts.join("/")
 }
 
@@ -34,12 +34,7 @@ impl Controller for SwitchController {
         let mut result: Vec<Subscription> = Vec::new();
         let config = &self.config;
 
-        let p = [
-            "state".to_string(),
-            config.c.location.clone(),
-            config.c.device.clone(),
-            "power".to_string(),
-        ];
+        let p = ["state", &config.c.location, &config.c.device, "power"];
         let s = Subscription {
             topic: topic(&p),
             label: ButtonStateMsgType::Power as u32,

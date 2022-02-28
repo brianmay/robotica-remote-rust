@@ -26,7 +26,7 @@ impl MusicController {
     }
 }
 
-fn topic(parts: &[String]) -> String {
+fn topic(parts: &[&str]) -> String {
     parts.join("/")
 }
 
@@ -35,12 +35,7 @@ impl Controller for MusicController {
         let mut result: Vec<Subscription> = Vec::new();
         let config = &self.config;
 
-        let p = [
-            "state".to_string(),
-            config.c.location.clone(),
-            config.c.device.clone(),
-            "play_list".to_string(),
-        ];
+        let p = ["state", &config.c.location, &config.c.device, "play_list"];
         let s = Subscription {
             topic: topic(&p),
             label: ButtonStateMsgType::PlayList as u32,
