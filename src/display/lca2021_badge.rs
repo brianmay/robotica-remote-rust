@@ -3,8 +3,6 @@ use std::thread;
 
 use anyhow::Result;
 
-use display_interface::DisplayError;
-
 use embedded_graphics::mono_font::ascii::FONT_5X8;
 use ssd1306;
 use ssd1306::mode::BufferedGraphicsMode;
@@ -45,6 +43,81 @@ type Bus<'a> = I2cProxy<'a, NullMutex<Master<I2C0, Gpio5<Unknown>, Gpio4<Unknown
 type Display<'a> =
     Ssd1306<I2CInterface<Bus<'a>>, DisplaySize128x64, BufferedGraphicsMode<DisplaySize128x64>>;
 
+pub trait FlushableDrawTarget: DrawTarget {
+    fn flush(&mut self) -> Result<(), Self::Error>;
+    fn set_display_on(&mut self, on: bool) -> Result<(), Self::Error>;
+}
+
+struct FlushableAdaptor<A, B, D> {
+    flush_adaptor: A,
+    set_display_on_adaptor: B,
+    display: D,
+}
+
+impl<A, B, D> FlushableAdaptor<A, B, D> {
+    pub fn new(flush_adaptor: A, set_display_on_adaptor: B, display: D) -> Self {
+        Self {
+            flush_adaptor,
+            set_display_on_adaptor,
+            display,
+        }
+    }
+}
+
+impl<A, B, D> FlushableDrawTarget for FlushableAdaptor<A, B, D>
+where
+    A: Fn(&mut D) -> Result<(), D::Error>,
+    B: Fn(&mut D, bool) -> Result<(), D::Error>,
+    D: DrawTarget,
+{
+    fn flush(&mut self) -> Result<(), Self::Error> {
+        (self.flush_adaptor)(&mut self.display)
+    }
+    fn set_display_on(&mut self, on: bool) -> Result<(), Self::Error> {
+        (self.set_display_on_adaptor)(&mut self.display, on)
+    }
+}
+
+impl<A, B, D> DrawTarget for FlushableAdaptor<A, B, D>
+where
+    D: DrawTarget,
+{
+    type Error = D::Error;
+
+    type Color = D::Color;
+
+    fn draw_iter<I>(&mut self, pixels: I) -> Result<(), Self::Error>
+    where
+        I: IntoIterator<Item = Pixel<Self::Color>>,
+    {
+        self.display.draw_iter(pixels)
+    }
+
+    fn fill_contiguous<I>(&mut self, area: &Rectangle, colors: I) -> Result<(), Self::Error>
+    where
+        I: IntoIterator<Item = Self::Color>,
+    {
+        self.display.fill_contiguous(area, colors)
+    }
+
+    fn fill_solid(&mut self, area: &Rectangle, color: Self::Color) -> Result<(), Self::Error> {
+        self.display.fill_solid(area, color)
+    }
+
+    fn clear(&mut self, color: Self::Color) -> Result<(), Self::Error> {
+        self.display.clear(color)
+    }
+}
+
+impl<A, B, D> Dimensions for FlushableAdaptor<A, B, D>
+where
+    D: Dimensions,
+{
+    fn bounding_box(&self) -> Rectangle {
+        self.display.bounding_box()
+    }
+}
+
 pub fn get_bus(
     i2c: i2c::I2C0,
     scl: gpio::Gpio4<gpio::Unknown>,
@@ -58,23 +131,34 @@ pub fn get_bus(
     Ok(bus)
 }
 
-pub fn get_display(bus: Bus, address: u8) -> Result<Display> {
+// This clippy warning is false, lifetimes are required here.
+#[allow(clippy::needless_lifetimes)]
+pub fn get_display<'a>(
+    bus: Bus<'a>,
+    address: u8,
+) -> Result<impl FlushableDrawTarget<Error = impl std::fmt::Debug, Color = BinaryColor> + 'a> {
     let di = ssd1306::I2CDisplayInterface::new_custom_address(bus, address);
 
-    let display = ssd1306::Ssd1306::new(
+    let mut display = ssd1306::Ssd1306::new(
         di,
         ssd1306::size::DisplaySize128x64,
         ssd1306::rotation::DisplayRotation::Rotate0,
     )
     .into_buffered_graphics_mode();
 
-    Ok(display)
+    display.init().unwrap();
+
+    let flush = move |d: &mut Display| d.flush();
+    let set_display_on = move |d: &mut Display, on: bool| d.set_display_on(on);
+
+    Ok(FlushableAdaptor::new(flush, set_display_on, display))
 }
 
 struct State {
     state: DisplayState,
     icon: Icon,
     name: String,
+    pressed: bool
 }
 
 pub const NUM_COLUMNS: u32 = 2;
@@ -87,7 +171,7 @@ pub fn connect(
     tx_main: Sender,
 ) -> Result<mpsc::Sender<DisplayCommand>> {
     let (tx, rx) = mpsc::channel();
-    let mut pages: [[Option<State>; NUM_PAGES as usize]; NUM_COLUMNS as usize] = Default::default();
+    let mut states: [[Option<State>; NUM_PAGES as usize]; NUM_COLUMNS as usize] = Default::default();
     let mut page_number: usize = 0;
 
     let bus = get_bus(i2c, scl, sda).unwrap();
@@ -101,9 +185,6 @@ pub fn connect(
         let mut display0 = get_display(bus.acquire_i2c(), 0x3C).unwrap();
         let mut display1 = get_display(bus.acquire_i2c(), 0x3D).unwrap();
 
-        display0.init().unwrap();
-        display1.init().unwrap();
-
         led_draw_loading(&mut display0);
         led_draw_loading(&mut display1);
 
@@ -114,9 +195,16 @@ pub fn connect(
             match received {
                 DisplayCommand::DisplayState(state, icon, id, name) => {
                     let column: usize = (id % NUM_COLUMNS) as usize;
-                    let page = State { state, icon, name };
                     let number: usize = (id / NUM_COLUMNS) as usize;
-                    pages[column][number] = Some(page);
+
+                    let pressed = if let Some(old) = &states[column][number] {
+                        old.pressed
+                    } else {
+                        false
+                    };
+
+                    let page = State { state, icon, name, pressed };
+                    states[column][number] = Some(page);
                 }
                 DisplayCommand::BlankAll => {
                     display0.set_display_on(false).unwrap();
@@ -142,14 +230,28 @@ pub fn connect(
                         .send(Message::DisplayPage(page_number as u32))
                         .unwrap();
                 }
+                DisplayCommand::ButtonPressed(id) => {
+                    let column: usize = (id % NUM_COLUMNS) as usize;
+                    let number: usize = (id / NUM_COLUMNS) as usize;
+                    if let Some(page) = &mut states[column][number] {
+                        page.pressed = true;
+                    }
+                },
+                DisplayCommand::ButtonReleased(id) => {
+                    let column: usize = (id % NUM_COLUMNS) as usize;
+                    let number: usize = (id / NUM_COLUMNS) as usize;
+                    if let Some(page) = &mut states[column][number] {
+                        page.pressed = false;
+                    }
+                },
             }
 
             let number = page_number * NUM_COLUMNS as usize;
-            page_draw(&mut display0, &pages[0][page_number], number);
+            page_draw(&mut display0, &states[0][page_number], number);
             display0.flush().unwrap();
 
             let number = number + 1;
-            page_draw(&mut display1, &pages[1][page_number], number);
+            page_draw(&mut display1, &states[1][page_number], number);
             display1.flush().unwrap();
         }
     })?;
@@ -157,37 +259,36 @@ pub fn connect(
     Ok(tx)
 }
 
-fn page_draw<D>(display: &mut D, page_or_none: &Option<State>, number: usize)
-where
-    D: DrawTarget<Error = DisplayError, Color = BinaryColor> + Dimensions,
-    D::Color: From<Rgb565>,
-{
+fn page_draw(
+    display: &mut (impl DrawTarget<Error = impl std::fmt::Debug, Color = BinaryColor> + Dimensions),
+    state_or_none: &Option<State>,
+    number: usize,
+) {
     led_clear(display);
 
-    if let Some(page) = page_or_none {
-        let image_category = get_image_category(&page.state);
-        let image_data = get_image_data(&image_category, &page.icon);
+    if let Some(state) = state_or_none {
+        let image_category = get_image_category(&state.state);
+        let image_data = get_image_data(&image_category, &state.icon);
         led_draw_image(display, image_data);
-        led_draw_overlay(display, &page.state);
-        led_draw_name(display, &page.name);
+        led_draw_overlay(display, &state.state);
+        led_draw_name(display, &state.name);
+        if state.pressed {
+            led_draw_pressed(display);
+        }
     }
 
     led_draw_number(display, number);
 }
 
-fn led_clear<D>(display: &mut D)
-where
-    D: DrawTarget<Error = DisplayError> + Dimensions,
-    D::Color: From<Rgb565>,
-{
+fn led_clear(
+    display: &mut (impl DrawTarget<Error = impl std::fmt::Debug, Color = BinaryColor> + Dimensions),
+) {
     display.clear(Rgb565::BLACK.into()).unwrap();
 }
 
-fn led_draw_loading<D>(display: &mut D)
-where
-    D: DrawTarget<Error = DisplayError> + Dimensions,
-    D::Color: From<Rgb565>,
-{
+fn led_draw_loading(
+    display: &mut (impl DrawTarget<Error = impl std::fmt::Debug, Color = BinaryColor> + Dimensions),
+) {
     Rectangle::new(display.bounding_box().top_left, display.bounding_box().size)
         .into_styled(
             PrimitiveStyleBuilder::new()
@@ -210,11 +311,25 @@ where
     .unwrap();
 }
 
-fn led_draw_number<D>(display: &mut D, number: usize)
-where
-    D: DrawTarget<Error = DisplayError> + Dimensions,
-    D::Color: From<Rgb565>,
-{
+fn led_draw_pressed(
+    display: &mut (impl DrawTarget<Error = impl std::fmt::Debug, Color = BinaryColor> + Dimensions),
+) {
+    Rectangle::new(display.bounding_box().top_left, display.bounding_box().size)
+        .into_styled(
+            PrimitiveStyleBuilder::new()
+                .reset_fill_color()
+                .stroke_color(Rgb565::YELLOW.into())
+                .stroke_width(1)
+                .build(),
+        )
+        .draw(display)
+        .unwrap();
+}
+
+fn led_draw_number(
+    display: &mut (impl DrawTarget<Error = impl std::fmt::Debug, Color = BinaryColor> + Dimensions),
+    number: usize,
+) {
     let t = format!("{}", number);
 
     Text::new(
@@ -226,14 +341,13 @@ where
     .unwrap();
 }
 
-fn led_draw_name<D>(display: &mut D, name: &str)
-where
-    D: DrawTarget<Error = DisplayError> + Dimensions,
-    D::Color: From<Rgb565>,
-{
+fn led_draw_name(
+    display: &mut (impl DrawTarget<Error = impl std::fmt::Debug, Color = BinaryColor> + Dimensions),
+    name: &str,
+) {
     Text::new(
         name,
-        Point::new(0, (display.bounding_box().size.height - 4) as i32),
+        Point::new(2, (display.bounding_box().size.height - 4) as i32),
         MonoTextStyle::new(&FONT_5X8, Rgb565::WHITE.into()),
     )
     .draw(display)
@@ -283,16 +397,21 @@ fn get_image_data<'a>(
             Off => include_bytes!("images/wake_up_off_64x64.tga").as_slice(),
             OnOther => include_bytes!("images/wake_up_on_other_64x64.tga").as_slice(),
         },
+        Icon::TV => match image {
+            HardOff => include_bytes!("images/tv_hard_off_64x64.tga").as_slice(),
+            On => include_bytes!("images/tv_on_64x64.tga").as_slice(),
+            Off => include_bytes!("images/tv_off_64x64.tga").as_slice(),
+            OnOther => include_bytes!("images/tv_on_other_64x64.tga").as_slice(),
+        },
     };
 
     DynamicTga::from_slice(data).unwrap()
 }
 
-fn led_draw_image<D>(display: &mut D, tga: DynamicTga<BinaryColor>)
-where
-    D: DrawTarget<Error = DisplayError, Color = BinaryColor> + Dimensions,
-    D::Color: From<Rgb565>,
-{
+fn led_draw_image(
+    display: &mut (impl DrawTarget<Error = impl std::fmt::Debug, Color = BinaryColor> + Dimensions),
+    tga: DynamicTga<BinaryColor>,
+) {
     let size = tga.size();
     let display_size = display.bounding_box();
     let center = display_size.center();
@@ -303,11 +422,10 @@ where
     Image::new(&tga, Point::new(x, y)).draw(display).unwrap();
 }
 
-fn led_draw_overlay<D>(display: &mut D, state: &DisplayState)
-where
-    D: DrawTarget<Error = DisplayError, Color = BinaryColor> + Dimensions,
-    D::Color: From<Rgb565>,
-{
+fn led_draw_overlay(
+    display: &mut (impl DrawTarget<Error = impl std::fmt::Debug, Color = BinaryColor> + Dimensions),
+    state: &DisplayState,
+) {
     let display_size = display.bounding_box();
 
     let text = match state {

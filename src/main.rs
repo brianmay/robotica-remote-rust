@@ -231,12 +231,14 @@ fn main() -> Result<()> {
                 if status.display_on {
                     let id = id + page * boards::NUM_COLUMNS;
                     button_press(&mut controllers, id, &mqtt);
+                    display.send(DisplayCommand::ButtonPressed(id)).unwrap();
                 }
                 requested_display_status.reset_timer();
                 do_blank(&display, &mut timer, &requested_display_status, &mut status);
             }
             Message::ButtonPress(ButtonId::Controller(id)) => {
                 button_press(&mut controllers, id, &mqtt);
+                display.send(DisplayCommand::ButtonPressed(id)).unwrap();
                 requested_display_status.reset_timer();
                 do_blank(&display, &mut timer, &requested_display_status, &mut status);
             }
@@ -252,7 +254,20 @@ fn main() -> Result<()> {
                 requested_display_status.reset_timer();
                 do_blank(&display, &mut timer, &requested_display_status, &mut status);
             }
-            Message::ButtonRelease(_id) => {
+            Message::ButtonRelease(ButtonId::Physical(id)) => {
+                info!("Got button release");
+                let id = id + page * boards::NUM_COLUMNS;
+                display.send(DisplayCommand::ButtonReleased(id)).unwrap();
+                requested_display_status.reset_timer();
+                do_blank(&display, &mut timer, &requested_display_status, &mut status);
+            }
+            Message::ButtonRelease(ButtonId::Controller(id)) => {
+                info!("Got button release");
+                display.send(DisplayCommand::ButtonReleased(id)).unwrap();
+                requested_display_status.reset_timer();
+                do_blank(&display, &mut timer, &requested_display_status, &mut status);
+            }
+            Message::ButtonRelease(_) => {
                 info!("Got button release");
                 requested_display_status.reset_timer();
                 do_blank(&display, &mut timer, &requested_display_status, &mut status);

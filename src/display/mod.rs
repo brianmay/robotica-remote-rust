@@ -13,4 +13,6 @@ pub enum DisplayCommand {
     UnBlankAll,
     PageUp,
     PageDown,
+    ButtonPressed(u32),
+    ButtonReleased(u32)
 }
