@@ -2,7 +2,7 @@
 name = "robotica-remote-rust"
 version = "0.22.8"
 authors = ["brianmay"]
-edition = "2018"
+edition = "2021"
 categories = ["embedded", "hardware-support"]
 keywords = ["embedded", "svc", "idf", "esp-idf", "esp32"]
 description = "A remote control system based on MQTT"
