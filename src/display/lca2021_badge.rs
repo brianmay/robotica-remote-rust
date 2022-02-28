@@ -7,6 +7,7 @@ use display_interface::DisplayError;
 
 use embedded_graphics::mono_font::ascii::FONT_5X8;
 use ssd1306;
+use ssd1306::mode::BufferedGraphicsMode;
 use ssd1306::mode::DisplayConfig;
 
 use esp_idf_hal::gpio;
@@ -31,32 +32,44 @@ use crate::messages::Sender;
 
 use crate::display::DisplayCommand;
 
-// pub fn get_displays<D>(
-//     i2c: i2c::I2C0,
-//     scl: gpio::Gpio4<gpio::Unknown>,
-//     sda: gpio::Gpio5<gpio::Unknown>,
-// ) -> Result<D>
-// where
-//     D: From<ssd1306::Ssd1306>
-//     // D: DrawTarget<Error = DisplayError, Color = BinaryColor> + Dimensions,
-//     // D::Color: From<Rgb565>,
-// {
-//     let config = <i2c::config::MasterConfig as Default>::default().baudrate(400.kHz().into());
-//     let xxx =
-//         i2c::Master::<i2c::I2C0, _, _>::new(i2c, i2c::MasterPins { sda, scl }, config).unwrap();
-//     let bus = shared_bus::BusManagerSimple::new(xxx);
+use gpio::{Gpio4, Gpio5, Unknown};
+use i2c::{Master, I2C0};
+use shared_bus::BusManager;
+use shared_bus::I2cProxy;
+use shared_bus::NullMutex;
+use ssd1306::prelude::I2CInterface;
+use ssd1306::size::DisplaySize128x64;
+use ssd1306::Ssd1306;
+type SharedBus = BusManager<NullMutex<Master<I2C0, Gpio5<Unknown>, Gpio4<Unknown>>>>;
+type Bus<'a> = I2cProxy<'a, NullMutex<Master<I2C0, Gpio5<Unknown>, Gpio4<Unknown>>>>;
+type Display<'a> =
+    Ssd1306<I2CInterface<Bus<'a>>, DisplaySize128x64, BufferedGraphicsMode<DisplaySize128x64>>;
 
-//     let di = ssd1306::I2CDisplayInterface::new_custom_address(bus.acquire_i2c(), 0x3C);
+pub fn get_bus(
+    i2c: i2c::I2C0,
+    scl: gpio::Gpio4<gpio::Unknown>,
+    sda: gpio::Gpio5<gpio::Unknown>,
+) -> Result<SharedBus> {
+    let config = <i2c::config::MasterConfig as Default>::default().baudrate(400.kHz().into());
+    let xxx =
+        i2c::Master::<i2c::I2C0, _, _>::new(i2c, i2c::MasterPins { sda, scl }, config).unwrap();
+    let bus = shared_bus::BusManagerSimple::new(xxx);
 
-//     let mut display = ssd1306::Ssd1306::new(
-//         di,
-//         ssd1306::size::DisplaySize128x64,
-//         ssd1306::rotation::DisplayRotation::Rotate0,
-//     )
-//     .into_buffered_graphics_mode();
+    Ok(bus)
+}
 
-//     Ok(display)
-// }
+pub fn get_display(bus: Bus, address: u8) -> Result<Display> {
+    let di = ssd1306::I2CDisplayInterface::new_custom_address(bus, address);
+
+    let display = ssd1306::Ssd1306::new(
+        di,
+        ssd1306::size::DisplaySize128x64,
+        ssd1306::rotation::DisplayRotation::Rotate0,
+    )
+    .into_buffered_graphics_mode();
+
+    Ok(display)
+}
 
 struct State {
     state: DisplayState,
@@ -77,11 +90,7 @@ pub fn connect(
     let mut pages: [[Option<State>; NUM_PAGES as usize]; NUM_COLUMNS as usize] = Default::default();
     let mut page_number: usize = 0;
 
-    let config = <i2c::config::MasterConfig as Default>::default().baudrate(400.kHz().into());
-    let xxx =
-        i2c::Master::<i2c::I2C0, _, _>::new(i2c, i2c::MasterPins { sda, scl }, config).unwrap();
-    let bus = shared_bus::BusManagerSimple::new(xxx);
-
+    let bus = get_bus(i2c, scl, sda).unwrap();
     let builder = thread::Builder::new().stack_size(8 * 1024);
 
     tx_main
@@ -89,22 +98,8 @@ pub fn connect(
         .unwrap();
 
     builder.spawn(move || {
-        let di0 = ssd1306::I2CDisplayInterface::new_custom_address(bus.acquire_i2c(), 0x3C);
-        let di1 = ssd1306::I2CDisplayInterface::new_custom_address(bus.acquire_i2c(), 0x3D);
-
-        let mut display0 = ssd1306::Ssd1306::new(
-            di0,
-            ssd1306::size::DisplaySize128x64,
-            ssd1306::rotation::DisplayRotation::Rotate0,
-        )
-        .into_buffered_graphics_mode();
-
-        let mut display1 = ssd1306::Ssd1306::new(
-            di1,
-            ssd1306::size::DisplaySize128x64,
-            ssd1306::rotation::DisplayRotation::Rotate0,
-        )
-        .into_buffered_graphics_mode();
+        let mut display0 = get_display(bus.acquire_i2c(), 0x3C).unwrap();
+        let mut display1 = get_display(bus.acquire_i2c(), 0x3D).unwrap();
 
         display0.init().unwrap();
         display1.init().unwrap();
