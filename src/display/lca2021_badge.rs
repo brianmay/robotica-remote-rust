@@ -158,7 +158,7 @@ struct State {
     state: DisplayState,
     icon: Icon,
     name: String,
-    pressed: bool
+    pressed: bool,
 }
 
 pub const NUM_COLUMNS: u32 = 2;
@@ -171,7 +171,8 @@ pub fn connect(
     tx_main: Sender,
 ) -> Result<mpsc::Sender<DisplayCommand>> {
     let (tx, rx) = mpsc::channel();
-    let mut states: [[Option<State>; NUM_PAGES as usize]; NUM_COLUMNS as usize] = Default::default();
+    let mut states: [[Option<State>; NUM_PAGES as usize]; NUM_COLUMNS as usize] =
+        Default::default();
     let mut page_number: usize = 0;
 
     let bus = get_bus(i2c, scl, sda).unwrap();
@@ -203,7 +204,12 @@ pub fn connect(
                         false
                     };
 
-                    let page = State { state, icon, name, pressed };
+                    let page = State {
+                        state,
+                        icon,
+                        name,
+                        pressed,
+                    };
                     states[column][number] = Some(page);
                 }
                 DisplayCommand::BlankAll => {
@@ -236,14 +242,14 @@ pub fn connect(
                     if let Some(page) = &mut states[column][number] {
                         page.pressed = true;
                     }
-                },
+                }
                 DisplayCommand::ButtonReleased(id) => {
                     let column: usize = (id % NUM_COLUMNS) as usize;
                     let number: usize = (id / NUM_COLUMNS) as usize;
                     if let Some(page) = &mut states[column][number] {
                         page.pressed = false;
                     }
-                },
+                }
             }
 
             let number = page_number * NUM_COLUMNS as usize;

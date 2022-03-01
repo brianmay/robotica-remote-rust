@@ -14,5 +14,5 @@ pub enum DisplayCommand {
     PageUp,
     PageDown,
     ButtonPressed(u32),
-    ButtonReleased(u32)
+    ButtonReleased(u32),
 }
