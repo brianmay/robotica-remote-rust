@@ -266,7 +266,7 @@ pub fn connect(
 }
 
 fn page_draw(
-    display: &mut (impl DrawTarget<Error = impl std::fmt::Debug, Color = BinaryColor> + Dimensions),
+    display: &mut impl DrawTarget<Error = impl std::fmt::Debug, Color = BinaryColor>,
     state_or_none: &Option<State>,
     number: usize,
 ) {
@@ -286,14 +286,12 @@ fn page_draw(
     led_draw_number(display, number);
 }
 
-fn led_clear(
-    display: &mut (impl DrawTarget<Error = impl std::fmt::Debug, Color = BinaryColor> + Dimensions),
-) {
+fn led_clear(display: &mut impl DrawTarget<Error = impl std::fmt::Debug, Color = BinaryColor>) {
     display.clear(Rgb565::BLACK.into()).unwrap();
 }
 
 fn led_draw_loading(
-    display: &mut (impl DrawTarget<Error = impl std::fmt::Debug, Color = BinaryColor> + Dimensions),
+    display: &mut impl DrawTarget<Error = impl std::fmt::Debug, Color = BinaryColor>,
 ) {
     Rectangle::new(display.bounding_box().top_left, display.bounding_box().size)
         .into_styled(
@@ -318,7 +316,7 @@ fn led_draw_loading(
 }
 
 fn led_draw_pressed(
-    display: &mut (impl DrawTarget<Error = impl std::fmt::Debug, Color = BinaryColor> + Dimensions),
+    display: &mut impl DrawTarget<Error = impl std::fmt::Debug, Color = BinaryColor>,
 ) {
     Rectangle::new(display.bounding_box().top_left, display.bounding_box().size)
         .into_styled(
@@ -333,7 +331,7 @@ fn led_draw_pressed(
 }
 
 fn led_draw_number(
-    display: &mut (impl DrawTarget<Error = impl std::fmt::Debug, Color = BinaryColor> + Dimensions),
+    display: &mut impl DrawTarget<Error = impl std::fmt::Debug, Color = BinaryColor>,
     number: usize,
 ) {
     let t = format!("{}", number);
@@ -348,7 +346,7 @@ fn led_draw_number(
 }
 
 fn led_draw_name(
-    display: &mut (impl DrawTarget<Error = impl std::fmt::Debug, Color = BinaryColor> + Dimensions),
+    display: &mut impl DrawTarget<Error = impl std::fmt::Debug, Color = BinaryColor>,
     name: &str,
 ) {
     Text::new(
@@ -415,7 +413,7 @@ fn get_image_data<'a>(
 }
 
 fn led_draw_image(
-    display: &mut (impl DrawTarget<Error = impl std::fmt::Debug, Color = BinaryColor> + Dimensions),
+    display: &mut impl DrawTarget<Error = impl std::fmt::Debug, Color = BinaryColor>,
     tga: DynamicTga<BinaryColor>,
 ) {
     let size = tga.size();
@@ -429,7 +427,7 @@ fn led_draw_image(
 }
 
 fn led_draw_overlay(
-    display: &mut (impl DrawTarget<Error = impl std::fmt::Debug, Color = BinaryColor> + Dimensions),
+    display: &mut impl DrawTarget<Error = impl std::fmt::Debug, Color = BinaryColor>,
     state: &DisplayState,
 ) {
     let display_size = display.bounding_box();
