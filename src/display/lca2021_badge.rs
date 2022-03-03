@@ -1,6 +1,8 @@
 use std::sync::mpsc;
 use std::thread;
 
+use log::*;
+
 use anyhow::Result;
 
 use embedded_graphics::mono_font::ascii::FONT_5X8;
@@ -176,28 +178,33 @@ pub fn connect(
     tx_main: Sender,
 ) -> Result<mpsc::Sender<DisplayCommand>> {
     let (tx, rx) = mpsc::channel();
-    let mut states: [[Option<State>; NUM_PAGES as usize]; NUM_COLUMNS as usize] =
-        Default::default();
-    let mut page_number: usize = 0;
 
     let bus = get_bus(i2c, scl, sda).unwrap();
     let builder = thread::Builder::new().stack_size(8 * 1024);
 
-    tx_main
-        .send(Message::DisplayPage(page_number as u32))
-        .unwrap();
-
     builder.spawn(move || {
-        let mut display0 = get_display(bus.acquire_i2c(), 0x3C).unwrap();
-        let mut display1 = get_display(bus.acquire_i2c(), 0x3D).unwrap();
+        let mut states: [[Option<State>; NUM_PAGES as usize]; NUM_COLUMNS as usize] =
+            Default::default();
+        let mut page_number: usize = 0;
 
-        led_draw_loading(&mut display0);
-        led_draw_loading(&mut display1);
+        tx_main
+            .send(Message::DisplayPage(page_number as u32))
+            .unwrap();
 
-        display0.flush().unwrap();
-        display1.flush().unwrap();
+        let display0 = get_display(bus.acquire_i2c(), 0x3C).unwrap();
+        let display1 = get_display(bus.acquire_i2c(), 0x3D).unwrap();
 
+        let mut displays: [_; NUM_COLUMNS as usize] = [display0, display1];
+
+        for display in &mut displays {
+            led_draw_loading(display);
+            display.flush().unwrap();
+        }
+
+        let mut update_displays: [bool; NUM_COLUMNS as usize];
         for received in rx {
+            update_displays = [true, true];
+
             match received {
                 DisplayCommand::DisplayState(state, icon, id, name) => {
                     let column: usize = (id % NUM_COLUMNS) as usize;
@@ -216,14 +223,21 @@ pub fn connect(
                         pressed,
                     };
                     states[column][number] = Some(page);
+
+                    update_displays = [false, false];
+                    if page_number == number {
+                        update_displays[column] = true;
+                    }
                 }
                 DisplayCommand::BlankAll => {
-                    display0.set_display_on(false).unwrap();
-                    display1.set_display_on(false).unwrap();
+                    for display in &mut displays {
+                        display.set_display_on(false).unwrap();
+                    }
                 }
                 DisplayCommand::UnBlankAll => {
-                    display0.set_display_on(true).unwrap();
-                    display1.set_display_on(true).unwrap();
+                    for display in &mut displays {
+                        display.set_display_on(true).unwrap();
+                    }
                 }
                 DisplayCommand::PageUp => {
                     if page_number + 1 < NUM_PAGES as usize {
@@ -247,6 +261,10 @@ pub fn connect(
                     if let Some(page) = &mut states[column][number] {
                         page.pressed = true;
                     }
+                    update_displays = [false, false];
+                    if page_number == number {
+                        update_displays[column] = true;
+                    }
                 }
                 DisplayCommand::ButtonReleased(id) => {
                     let column: usize = (id % NUM_COLUMNS) as usize;
@@ -254,16 +272,23 @@ pub fn connect(
                     if let Some(page) = &mut states[column][number] {
                         page.pressed = false;
                     }
+                    update_displays = [false, false];
+                    if page_number == number {
+                        update_displays[column] = true;
+                    }
                 }
             }
 
-            let number = page_number * NUM_COLUMNS as usize;
-            page_draw(&mut display0, &states[0][page_number], number);
-            display0.flush().unwrap();
+            for (i, display) in &mut displays.iter_mut().enumerate() {
+                if update_displays[i] {
+                    info!("Drawing display {}", i);
+                    let number = page_number * NUM_COLUMNS as usize;
+                    page_draw(display, &states[i][page_number], number);
+                    display.flush().unwrap();
+                }
+            }
 
-            let number = number + 1;
-            page_draw(&mut display1, &states[1][page_number], number);
-            display1.flush().unwrap();
+            info!("Done flushing");
         }
     })?;
 

@@ -40,6 +40,7 @@ pub struct Subscription {
 }
 
 #[allow(dead_code)]
+#[derive(std::cmp::PartialEq)]
 pub enum DisplayState {
     HardOff,
     Error,

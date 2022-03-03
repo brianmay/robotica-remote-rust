@@ -78,8 +78,8 @@ fn update_display(
     id: u32,
     controller: &dyn button_controllers::Controller,
     status: &ActualDisplayStatus,
+    state: button_controllers::DisplayState,
 ) {
-    let state = controller.get_display_state();
     let icon = controller.get_icon();
     let name = controller.get_name();
     if status.display_on {
@@ -94,7 +94,8 @@ fn update_displays(
     status: &ActualDisplayStatus,
 ) {
     for (id, controller) in controllers.iter().enumerate() {
-        update_display(display, id as u32, controller.as_ref(), status);
+        let state = controller.get_display_state();
+        update_display(display, id as u32, controller.as_ref(), status, state);
     }
 }
 
@@ -214,8 +215,12 @@ fn main() -> Result<()> {
             Message::MqttReceived(topic, data, mqtt::Label::Button(id, sid)) => {
                 info!("Got message: {} - {}", topic, data);
                 let controller = controllers.get_mut(id as usize).unwrap();
+                let old_state = controller.get_display_state();
                 controller.process_message(sid, data);
-                update_display(&display, id, controller.as_ref(), &status);
+                let state = controller.get_display_state();
+                if old_state != state {
+                    update_display(&display, id, controller.as_ref(), &status, state);
+                }
             }
             Message::MqttConnect => {
                 info!("Got connected");
