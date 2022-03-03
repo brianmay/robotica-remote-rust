@@ -136,7 +136,12 @@ pub fn get_bus(
 pub fn get_display<'a>(
     bus: Bus<'a>,
     address: u8,
-) -> Result<impl FlushableDrawTarget<Error = impl std::fmt::Debug, Color = BinaryColor> + 'a> {
+) -> Result<
+    impl FlushableDrawTarget<
+            Error = impl std::fmt::Debug,
+            Color = impl PixelColor + From<Gray8> + From<Rgb555> + From<Rgb565> + From<Rgb888>,
+        > + 'a,
+> {
     let di = ssd1306::I2CDisplayInterface::new_custom_address(bus, address);
 
     let mut display = ssd1306::Ssd1306::new(
@@ -265,11 +270,12 @@ pub fn connect(
     Ok(tx)
 }
 
-fn page_draw(
-    display: &mut impl DrawTarget<Error = impl std::fmt::Debug, Color = BinaryColor>,
-    state_or_none: &Option<State>,
-    number: usize,
-) {
+fn page_draw<D>(display: &mut D, state_or_none: &Option<State>, number: usize)
+where
+    D: DrawTarget,
+    D::Color: PixelColor + From<Gray8> + From<Rgb555> + From<Rgb565> + From<Rgb888>,
+    D::Error: std::fmt::Debug,
+{
     led_clear(display);
 
     if let Some(state) = state_or_none {
@@ -286,13 +292,21 @@ fn page_draw(
     led_draw_number(display, number);
 }
 
-fn led_clear(display: &mut impl DrawTarget<Error = impl std::fmt::Debug, Color = BinaryColor>) {
+fn led_clear<D>(display: &mut D)
+where
+    D: DrawTarget,
+    D::Color: From<Rgb565>,
+    D::Error: std::fmt::Debug,
+{
     display.clear(Rgb565::BLACK.into()).unwrap();
 }
 
-fn led_draw_loading(
-    display: &mut impl DrawTarget<Error = impl std::fmt::Debug, Color = BinaryColor>,
-) {
+fn led_draw_loading<D>(display: &mut D)
+where
+    D: DrawTarget,
+    D::Color: From<Rgb565>,
+    D::Error: std::fmt::Debug,
+{
     Rectangle::new(display.bounding_box().top_left, display.bounding_box().size)
         .into_styled(
             PrimitiveStyleBuilder::new()
@@ -315,9 +329,12 @@ fn led_draw_loading(
     .unwrap();
 }
 
-fn led_draw_pressed(
-    display: &mut impl DrawTarget<Error = impl std::fmt::Debug, Color = BinaryColor>,
-) {
+fn led_draw_pressed<D>(display: &mut D)
+where
+    D: DrawTarget,
+    D::Color: From<Rgb565>,
+    D::Error: std::fmt::Debug,
+{
     Rectangle::new(display.bounding_box().top_left, display.bounding_box().size)
         .into_styled(
             PrimitiveStyleBuilder::new()
@@ -330,10 +347,12 @@ fn led_draw_pressed(
         .unwrap();
 }
 
-fn led_draw_number(
-    display: &mut impl DrawTarget<Error = impl std::fmt::Debug, Color = BinaryColor>,
-    number: usize,
-) {
+fn led_draw_number<D>(display: &mut D, number: usize)
+where
+    D: DrawTarget,
+    D::Color: From<Rgb565>,
+    D::Error: std::fmt::Debug,
+{
     let t = format!("{}", number);
 
     Text::new(
@@ -345,10 +364,12 @@ fn led_draw_number(
     .unwrap();
 }
 
-fn led_draw_name(
-    display: &mut impl DrawTarget<Error = impl std::fmt::Debug, Color = BinaryColor>,
-    name: &str,
-) {
+fn led_draw_name<D>(display: &mut D, name: &str)
+where
+    D: DrawTarget,
+    D::Color: From<Rgb565>,
+    D::Error: std::fmt::Debug,
+{
     Text::new(
         name,
         Point::new(2, (display.bounding_box().size.height - 4) as i32),
@@ -376,10 +397,10 @@ fn get_image_category(state: &DisplayState) -> ImageCategory {
     }
 }
 
-fn get_image_data<'a>(
+fn get_image_data<T: PixelColor + From<Gray8> + From<Rgb555> + From<Rgb888>>(
     image: &ImageCategory,
     icon: &button_controllers::Icon,
-) -> DynamicTga<'a, BinaryColor> {
+) -> impl ImageDrawable<Color = T> {
     use ImageCategory::*;
 
     let data = match icon {
@@ -412,10 +433,12 @@ fn get_image_data<'a>(
     DynamicTga::from_slice(data).unwrap()
 }
 
-fn led_draw_image(
-    display: &mut impl DrawTarget<Error = impl std::fmt::Debug, Color = BinaryColor>,
-    tga: DynamicTga<BinaryColor>,
-) {
+fn led_draw_image<D, I, C>(display: &mut D, tga: I)
+where
+    D: DrawTarget<Color = C>,
+    D::Error: std::fmt::Debug,
+    I: ImageDrawable<Color = C>,
+{
     let size = tga.size();
     let display_size = display.bounding_box();
     let center = display_size.center();
@@ -426,10 +449,12 @@ fn led_draw_image(
     Image::new(&tga, Point::new(x, y)).draw(display).unwrap();
 }
 
-fn led_draw_overlay(
-    display: &mut impl DrawTarget<Error = impl std::fmt::Debug, Color = BinaryColor>,
-    state: &DisplayState,
-) {
+fn led_draw_overlay<D>(display: &mut D, state: &DisplayState)
+where
+    D: DrawTarget,
+    D::Color: From<Rgb565>,
+    D::Error: std::fmt::Debug,
+{
     let display_size = display.bounding_box();
 
     let text = match state {
