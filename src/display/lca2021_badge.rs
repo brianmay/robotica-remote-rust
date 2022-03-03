@@ -282,7 +282,7 @@ pub fn connect(
             for (i, display) in &mut displays.iter_mut().enumerate() {
                 if update_displays[i] {
                     info!("Drawing display {}", i);
-                    let number = page_number * NUM_COLUMNS as usize;
+                    let number = page_number * NUM_COLUMNS as usize + i;
                     page_draw(display, &states[i][page_number], number);
                     display.flush().unwrap();
                 }
