@@ -139,7 +139,7 @@ pub fn get_display<'a>(
 ) -> Result<
     impl FlushableDrawTarget<
             Error = impl std::fmt::Debug,
-            Color = impl PixelColor + From<Gray8> + From<Rgb555> + From<Rgb565> + From<Rgb888>,
+            Color = impl PixelColor + From<Gray8> + From<Rgb555> + From<Rgb888>,
         > + 'a,
 > {
     let di = ssd1306::I2CDisplayInterface::new_custom_address(bus, address);
@@ -273,7 +273,7 @@ pub fn connect(
 fn page_draw<D>(display: &mut D, state_or_none: &Option<State>, number: usize)
 where
     D: DrawTarget,
-    D::Color: PixelColor + From<Gray8> + From<Rgb555> + From<Rgb565> + From<Rgb888>,
+    D::Color: PixelColor + From<Gray8> + From<Rgb555> + From<Rgb888>,
     D::Error: std::fmt::Debug,
 {
     led_clear(display);
@@ -295,23 +295,23 @@ where
 fn led_clear<D>(display: &mut D)
 where
     D: DrawTarget,
-    D::Color: From<Rgb565>,
+    D::Color: From<Rgb555>,
     D::Error: std::fmt::Debug,
 {
-    display.clear(Rgb565::BLACK.into()).unwrap();
+    display.clear(Rgb555::BLACK.into()).unwrap();
 }
 
 fn led_draw_loading<D>(display: &mut D)
 where
     D: DrawTarget,
-    D::Color: From<Rgb565>,
+    D::Color: From<Rgb555>,
     D::Error: std::fmt::Debug,
 {
     Rectangle::new(display.bounding_box().top_left, display.bounding_box().size)
         .into_styled(
             PrimitiveStyleBuilder::new()
-                .fill_color(Rgb565::BLUE.into())
-                .stroke_color(Rgb565::YELLOW.into())
+                .fill_color(Rgb555::BLUE.into())
+                .stroke_color(Rgb555::YELLOW.into())
                 .stroke_width(1)
                 .build(),
         )
@@ -323,7 +323,7 @@ where
     Text::new(
         t,
         Point::new(10, (display.bounding_box().size.height - 10) as i32 / 2),
-        MonoTextStyle::new(&FONT_10X20, Rgb565::WHITE.into()),
+        MonoTextStyle::new(&FONT_10X20, Rgb555::WHITE.into()),
     )
     .draw(display)
     .unwrap();
@@ -332,14 +332,14 @@ where
 fn led_draw_pressed<D>(display: &mut D)
 where
     D: DrawTarget,
-    D::Color: From<Rgb565>,
+    D::Color: From<Rgb555>,
     D::Error: std::fmt::Debug,
 {
     Rectangle::new(display.bounding_box().top_left, display.bounding_box().size)
         .into_styled(
             PrimitiveStyleBuilder::new()
                 .reset_fill_color()
-                .stroke_color(Rgb565::YELLOW.into())
+                .stroke_color(Rgb555::YELLOW.into())
                 .stroke_width(1)
                 .build(),
         )
@@ -350,7 +350,7 @@ where
 fn led_draw_number<D>(display: &mut D, number: usize)
 where
     D: DrawTarget,
-    D::Color: From<Rgb565>,
+    D::Color: From<Rgb555>,
     D::Error: std::fmt::Debug,
 {
     let t = format!("{}", number);
@@ -358,7 +358,7 @@ where
     Text::new(
         &t,
         Point::new(0, 14),
-        MonoTextStyle::new(&FONT_10X20, Rgb565::WHITE.into()),
+        MonoTextStyle::new(&FONT_10X20, Rgb555::WHITE.into()),
     )
     .draw(display)
     .unwrap();
@@ -367,13 +367,13 @@ where
 fn led_draw_name<D>(display: &mut D, name: &str)
 where
     D: DrawTarget,
-    D::Color: From<Rgb565>,
+    D::Color: From<Rgb555>,
     D::Error: std::fmt::Debug,
 {
     Text::new(
         name,
         Point::new(2, (display.bounding_box().size.height - 4) as i32),
-        MonoTextStyle::new(&FONT_5X8, Rgb565::WHITE.into()),
+        MonoTextStyle::new(&FONT_5X8, Rgb555::WHITE.into()),
     )
     .draw(display)
     .unwrap();
@@ -452,7 +452,7 @@ where
 fn led_draw_overlay<D>(display: &mut D, state: &DisplayState)
 where
     D: DrawTarget,
-    D::Color: From<Rgb565>,
+    D::Color: From<Rgb555>,
     D::Error: std::fmt::Debug,
 {
     let display_size = display.bounding_box();
@@ -477,8 +477,8 @@ where
         Rectangle::new(ul, size)
             .into_styled(
                 PrimitiveStyleBuilder::new()
-                    .fill_color(Rgb565::BLACK.into())
-                    .stroke_color(Rgb565::WHITE.into())
+                    .fill_color(Rgb555::BLACK.into())
+                    .stroke_color(Rgb555::WHITE.into())
                     .stroke_width(1)
                     .build(),
             )
@@ -488,7 +488,7 @@ where
         Text::with_alignment(
             text,
             Point::new(center.x, y + 17),
-            MonoTextStyle::new(&FONT_10X20, Rgb565::WHITE.into()),
+            MonoTextStyle::new(&FONT_10X20, Rgb555::WHITE.into()),
             Alignment::Center,
         )
         .draw(display)
