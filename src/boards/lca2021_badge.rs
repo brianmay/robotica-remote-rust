@@ -12,7 +12,7 @@ use crate::messages;
 use crate::touch;
 use crate::wifi;
 
-pub const NUM_COLUMNS: usize = display::lca2021_badge::NUM_COLUMNS;
+pub const NUM_DISPLAYS: usize = display::lca2021_badge::NUM_DISPLAYS;
 // pub const NUM_PAGES: usize = display::lca2021_badge::NUM_PAGES;
 
 pub fn configure_devices(
