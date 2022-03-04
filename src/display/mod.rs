@@ -52,7 +52,7 @@ struct State {
 
 fn display_thread<D, const NUM_PAGES: usize, const NUM_DISPLAYS: usize>(
     tx_main: mpsc::Sender<Message>,
-    mut displays: [D; NUM_DISPLAYS],
+    displays: &mut [D; NUM_DISPLAYS],
     rx: mpsc::Receiver<DisplayCommand>,
 ) where
     D: FlushableDrawTarget,
@@ -64,7 +64,7 @@ fn display_thread<D, const NUM_PAGES: usize, const NUM_DISPLAYS: usize>(
     tx_main
         .send(Message::DisplayPage(selected_page_number))
         .unwrap();
-    for display in &mut displays {
+    for display in displays.iter_mut() {
         led_draw_loading(display);
         display.flush().unwrap();
     }
@@ -95,13 +95,13 @@ fn display_thread<D, const NUM_PAGES: usize, const NUM_DISPLAYS: usize>(
                 }
             }
             DisplayCommand::BlankAll => {
-                for display in &mut displays {
+                for display in displays.iter_mut() {
                     display.set_display_on(false).unwrap();
                 }
                 update_displays = [true; NUM_DISPLAYS];
             }
             DisplayCommand::UnBlankAll => {
-                for display in &mut displays {
+                for display in displays.iter_mut() {
                     display.set_display_on(true).unwrap();
                 }
                 update_displays = [true; NUM_DISPLAYS];
@@ -146,7 +146,7 @@ fn display_thread<D, const NUM_PAGES: usize, const NUM_DISPLAYS: usize>(
             }
         }
 
-        for (i, display) in &mut displays.iter_mut().enumerate() {
+        for (i, display) in displays.iter_mut().enumerate() {
             if update_displays[i] {
                 info!("Drawing display {}", i);
                 let number = selected_page_number * NUM_DISPLAYS + i;

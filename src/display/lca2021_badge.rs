@@ -102,8 +102,8 @@ pub fn connect(
     builder.spawn(move || {
         let display0 = get_display(bus.acquire_i2c(), 0x3C).unwrap();
         let display1 = get_display(bus.acquire_i2c(), 0x3D).unwrap();
-        let displays: [_; NUM_DISPLAYS as usize] = [display0, display1];
-        display_thread::<_, NUM_PAGES, NUM_DISPLAYS>(tx_main, displays, rx);
+        let mut displays: [_; NUM_DISPLAYS as usize] = [display0, display1];
+        display_thread::<_, NUM_PAGES, NUM_DISPLAYS>(tx_main, &mut displays, rx);
     })?;
 
     Ok(tx)
