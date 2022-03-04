@@ -9,7 +9,6 @@ use ssd1306;
 use ssd1306::mode::BufferedGraphicsMode;
 use ssd1306::mode::DisplayConfig;
 
-use esp_idf_hal::gpio;
 use esp_idf_hal::i2c;
 use esp_idf_hal::prelude::*;
 
@@ -90,8 +89,8 @@ pub const NUM_PAGES: usize = 4;
 
 pub fn connect(
     i2c: i2c::I2C0,
-    scl: gpio::Gpio4<gpio::Unknown>,
-    sda: gpio::Gpio5<gpio::Unknown>,
+    scl: impl OutputPin + 'static,
+    sda: impl InputPin + OutputPin + 'static,
     tx_main: Sender,
 ) -> Result<mpsc::Sender<DisplayCommand>> {
     let (tx, rx) = mpsc::channel();
