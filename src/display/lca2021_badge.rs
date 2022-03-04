@@ -168,8 +168,8 @@ struct State {
     pressed: bool,
 }
 
-pub const NUM_COLUMNS: u32 = 2;
-pub const NUM_PAGES: u32 = 4;
+pub const NUM_COLUMNS: usize = 2;
+pub const NUM_PAGES: usize = 4;
 
 pub fn connect(
     i2c: i2c::I2C0,
@@ -183,13 +183,10 @@ pub fn connect(
     let builder = thread::Builder::new().stack_size(8 * 1024);
 
     builder.spawn(move || {
-        let mut states: [[Option<State>; NUM_PAGES as usize]; NUM_COLUMNS as usize] =
-            Default::default();
+        let mut states: [[Option<State>; NUM_PAGES]; NUM_COLUMNS] = Default::default();
         let mut page_number: usize = 0;
 
-        tx_main
-            .send(Message::DisplayPage(page_number as u32))
-            .unwrap();
+        tx_main.send(Message::DisplayPage(page_number)).unwrap();
 
         let display0 = get_display(bus.acquire_i2c(), 0x3C).unwrap();
         let display1 = get_display(bus.acquire_i2c(), 0x3D).unwrap();
@@ -201,14 +198,13 @@ pub fn connect(
             display.flush().unwrap();
         }
 
-        let mut update_displays: [bool; NUM_COLUMNS as usize];
         for received in rx {
-            update_displays = [true, true];
+            let mut update_displays: [bool; NUM_COLUMNS] = [false; NUM_COLUMNS];
 
             match received {
                 DisplayCommand::DisplayState(state, icon, id, name) => {
-                    let column: usize = (id % NUM_COLUMNS) as usize;
-                    let number: usize = (id / NUM_COLUMNS) as usize;
+                    let column: usize = id % NUM_COLUMNS;
+                    let number: usize = id / NUM_COLUMNS;
 
                     let pressed = if let Some(old) = &states[column][number] {
                         old.pressed
@@ -224,7 +220,6 @@ pub fn connect(
                     };
                     states[column][number] = Some(page);
 
-                    update_displays = [false, false];
                     if page_number == number {
                         update_displays[column] = true;
                     }
@@ -233,46 +228,44 @@ pub fn connect(
                     for display in &mut displays {
                         display.set_display_on(false).unwrap();
                     }
+                    update_displays = [true; NUM_COLUMNS];
                 }
                 DisplayCommand::UnBlankAll => {
                     for display in &mut displays {
                         display.set_display_on(true).unwrap();
                     }
+                    update_displays = [true; NUM_COLUMNS];
                 }
                 DisplayCommand::PageUp => {
-                    if page_number + 1 < NUM_PAGES as usize {
+                    if page_number + 1 < NUM_PAGES {
                         page_number += 1
                     };
-                    tx_main
-                        .send(Message::DisplayPage(page_number as u32))
-                        .unwrap();
+                    update_displays = [true; NUM_COLUMNS];
+                    tx_main.send(Message::DisplayPage(page_number)).unwrap();
                 }
                 DisplayCommand::PageDown => {
                     if page_number > 0 {
                         page_number -= 1
                     };
-                    tx_main
-                        .send(Message::DisplayPage(page_number as u32))
-                        .unwrap();
+                    update_displays = [true; NUM_COLUMNS];
+                    tx_main.send(Message::DisplayPage(page_number)).unwrap();
                 }
                 DisplayCommand::ButtonPressed(id) => {
-                    let column: usize = (id % NUM_COLUMNS) as usize;
-                    let number: usize = (id / NUM_COLUMNS) as usize;
+                    let column: usize = id % NUM_COLUMNS;
+                    let number: usize = id / NUM_COLUMNS;
                     if let Some(page) = &mut states[column][number] {
                         page.pressed = true;
                     }
-                    update_displays = [false, false];
                     if page_number == number {
                         update_displays[column] = true;
                     }
                 }
                 DisplayCommand::ButtonReleased(id) => {
-                    let column: usize = (id % NUM_COLUMNS) as usize;
-                    let number: usize = (id / NUM_COLUMNS) as usize;
+                    let column: usize = id % NUM_COLUMNS;
+                    let number: usize = id / NUM_COLUMNS;
                     if let Some(page) = &mut states[column][number] {
                         page.pressed = false;
                     }
-                    update_displays = [false, false];
                     if page_number == number {
                         update_displays[column] = true;
                     }
@@ -282,7 +275,7 @@ pub fn connect(
             for (i, display) in &mut displays.iter_mut().enumerate() {
                 if update_displays[i] {
                     info!("Drawing display {}", i);
-                    let number = page_number * NUM_COLUMNS as usize + i;
+                    let number = page_number * NUM_COLUMNS + i;
                     page_draw(display, &states[i][page_number], number);
                     display.flush().unwrap();
                 }

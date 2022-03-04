@@ -75,7 +75,7 @@ impl RequestedDisplayStatus {
 
 fn update_display(
     display: &mpsc::Sender<DisplayCommand>,
-    id: u32,
+    id: usize,
     controller: &dyn button_controllers::Controller,
     status: &ActualDisplayStatus,
     state: button_controllers::DisplayState,
@@ -83,7 +83,7 @@ fn update_display(
     let icon = controller.get_icon();
     let name = controller.get_name();
     if status.display_on {
-        let message = DisplayCommand::DisplayState(state, icon, id as u32, name);
+        let message = DisplayCommand::DisplayState(state, icon, id, name);
         display.send(message).unwrap();
     }
 }
@@ -95,7 +95,7 @@ fn update_displays(
 ) {
     for (id, controller) in controllers.iter().enumerate() {
         let state = controller.get_display_state();
-        update_display(display, id as u32, controller.as_ref(), status, state);
+        update_display(display, id, controller.as_ref(), status, state);
     }
 }
 
@@ -141,7 +141,7 @@ fn do_blank(
 
 fn button_press(
     controllers: &mut [Box<dyn button_controllers::Controller>],
-    id: u32,
+    id: usize,
     mqtt: &mqtt::Mqtt,
 ) {
     info!("Got button {} press", id);
@@ -176,7 +176,7 @@ fn main() -> Result<()> {
     for (index, f) in controllers.iter().enumerate() {
         let subscriptions = f.get_subscriptions();
         for s in subscriptions {
-            let label = mqtt::Label::Button(index as u32, s.label);
+            let label = mqtt::Label::Button(index, s.label);
             info!("Subscribing to {}.", s.topic);
             mqtt.subscribe(&s.topic, label);
         }

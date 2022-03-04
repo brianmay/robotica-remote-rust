@@ -15,7 +15,7 @@ use crate::messages;
 
 #[derive(Clone)]
 pub enum Label {
-    Button(u32, u32),
+    Button(usize, u32),
     NightStatus,
 }
 

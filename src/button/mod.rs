@@ -11,8 +11,8 @@ use crate::messages;
 
 #[derive(Clone)]
 pub enum ButtonId {
-    Physical(u32),
-    Controller(u32),
+    Physical(usize),
+    Controller(usize),
     PageUp,
     PageDown,
 }

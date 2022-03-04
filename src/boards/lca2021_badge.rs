@@ -12,8 +12,8 @@ use crate::messages;
 use crate::touch;
 use crate::wifi;
 
-pub const NUM_COLUMNS: u32 = display::lca2021_badge::NUM_COLUMNS;
-// pub const NUM_PAGES: u32 = display::lca2021_badge::NUM_PAGES;
+pub const NUM_COLUMNS: usize = display::lca2021_badge::NUM_COLUMNS;
+// pub const NUM_PAGES: usize = display::lca2021_badge::NUM_PAGES;
 
 pub fn configure_devices(
     tx: mpsc::Sender<messages::Message>,

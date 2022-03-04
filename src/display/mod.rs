@@ -6,13 +6,13 @@ pub enum DisplayCommand {
     DisplayState(
         button_controllers::DisplayState,
         button_controllers::Icon,
-        u32,
+        usize,
         String,
     ),
     BlankAll,
     UnBlankAll,
     PageUp,
     PageDown,
-    ButtonPressed(u32),
-    ButtonReleased(u32),
+    ButtonPressed(usize),
+    ButtonReleased(usize),
 }
