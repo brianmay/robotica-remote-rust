@@ -37,7 +37,7 @@ pub enum DisplayCommand {
     ButtonReleased(usize),
 }
 
-pub trait FlushableDrawTarget: DrawTarget {
+trait FlushableDrawTarget: DrawTarget {
     fn flush(&mut self) -> Result<(), Self::Error>;
     fn set_display_on(&mut self, on: bool) -> Result<(), Self::Error>;
 }

@@ -46,7 +46,7 @@ impl<SDA: InputPin + OutputPin, SCL: OutputPin> FlushableDrawTarget for Display<
     }
 }
 
-pub fn get_bus<SDA: InputPin + OutputPin, SCL: OutputPin>(
+fn get_bus<SDA: InputPin + OutputPin, SCL: OutputPin>(
     i2c: i2c::I2C0,
     scl: SCL,
     sda: SDA,
@@ -61,7 +61,7 @@ pub fn get_bus<SDA: InputPin + OutputPin, SCL: OutputPin>(
 
 // This clippy warning is false, lifetimes are required here.
 #[allow(clippy::needless_lifetimes)]
-pub fn get_display<'a>(
+fn get_display<'a>(
     bus: Bus<'a, impl InputPin + OutputPin, impl OutputPin>,
     address: u8,
 ) -> Result<
