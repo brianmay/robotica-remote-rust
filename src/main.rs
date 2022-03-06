@@ -22,13 +22,13 @@ use crate::display::DisplayCommand;
 use crate::messages::Message;
 
 mod boards;
-
-mod wifi;
-
 mod config;
+
+mod input;
 mod messages;
 mod mqtt;
 mod touch;
+mod wifi;
 
 const MQTT_URL: &str = env!("MQTT_URL");
 

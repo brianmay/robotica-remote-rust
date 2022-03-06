@@ -1,12 +1,32 @@
 // Adapted from https://github.com/iamabetterdogtht/esp32-touch-sensor-example/blob/a45cd34c43963305bd84fd7dbc31414a5e4c41f4/src/touch.rs
 
+use std::ffi::c_void;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
+use std::thread;
+use std::time::Duration;
+use sys::c_types;
+
+use arr_macro::arr;
+
+use log::*;
+
 use anyhow::Result;
 use esp_idf_hal::gpio;
+use esp_idf_svc::eventloop::{
+    EspBackgroundEventLoop, EspBackgroundSubscription, EspEventFetchData, EspEventPostData,
+    EspTypedEventDeserializer, EspTypedEventSerializer, EspTypedEventSource,
+};
 use esp_idf_sys as sys;
 use esp_idf_sys::esp;
 
 use embedded_hal::digital::blocking::InputPin;
 use embedded_hal::digital::ErrorType;
+
+use embedded_svc::event_bus::EventBus;
+use embedded_svc::event_bus::Postbox;
+
+use crate::input::{Callback, InputPinNotify, Value};
 
 const NUM_TOUCH_PINS: usize = 10;
 
@@ -15,7 +35,9 @@ pub struct TouchControllerBuilder {
 }
 
 pub struct TouchPin {
-    pin: sys::touch_pad_t,
+    channel: sys::touch_pad_t,
+    pin_number: i32,
+    threshold: u16,
 }
 
 impl TouchControllerBuilder {
@@ -34,24 +56,49 @@ impl TouchControllerBuilder {
         })
     }
 
-    pub fn add_pin(&mut self, pin: impl gpio::TouchPin) -> Result<TouchPin> {
+    pub fn add_pin(&mut self, pin: impl gpio::TouchPin, threshold: u16) -> Result<TouchPin> {
         let channel = pin.touch_channel();
         self.touch_pins[channel as usize] = true;
         esp!(unsafe { sys::touch_pad_config(channel, 0) })?;
-        Ok(TouchPin { pin: channel })
+        esp!(unsafe { sys::touch_pad_set_thresh(channel, threshold) })?;
+        // esp!(unsafe { sys::touch_pad_set_trigger_mode()});
+        Ok(TouchPin {
+            channel,
+            pin_number: pin.pin(),
+            threshold,
+        })
     }
+}
 
-    pub fn build(self) -> Result<()> {
-        esp!(unsafe { sys::touch_pad_filter_start(10) })?;
-        esp!(unsafe { sys::touch_pad_clear_status() })?;
-        Ok(())
+#[no_mangle]
+#[inline(never)]
+// #[link_section = ".iram1"]
+unsafe extern "C" fn touch_handler(data: *mut c_void) {
+    let pin_number = data as i32;
+
+    let pad_intr = sys::touch_pad_get_status();
+    if esp!(sys::touch_pad_clear_status()).is_ok() {
+        for (channel, _) in CALLBACKS.iter().enumerate() {
+            if (pad_intr >> channel) & 1 == 1 {
+                match &mut EVENT_LOOP {
+                    Some(x) => {
+                        x.post(
+                            &EventLoopMessage(pin_number, channel as sys::touch_pad_t, Value::Low),
+                            None,
+                        )
+                        .unwrap();
+                    }
+                    None => {}
+                }
+            }
+        }
     }
 }
 
 impl TouchPin {
     pub fn read(&self) -> Result<u16> {
         let mut touch_value = 0;
-        esp!(unsafe { sys::touch_pad_read_filtered(self.pin, &mut touch_value) })?;
+        esp!(unsafe { sys::touch_pad_read_filtered(self.channel, &mut touch_value) })?;
 
         Ok(touch_value)
     }
@@ -63,10 +110,133 @@ impl ErrorType for TouchPin {
 
 impl InputPin for TouchPin {
     fn is_high(&self) -> Result<bool> {
-        Ok(self.read()? > 400)
+        Ok(self.read()? > self.threshold)
     }
 
     fn is_low(&self) -> Result<bool> {
         Ok(!self.is_high()?)
     }
 }
+
+impl InputPinNotify for TouchPin {
+    fn subscribe<F: Fn(i32, crate::input::Value) + Send + 'static>(&self, callback: F) {
+        info!("About to start a background touch event loop");
+
+        if unsafe { !INITIALIZED.load(Ordering::SeqCst) } {
+            self.initialize();
+            unsafe { INITIALIZED.store(true, Ordering::SeqCst) };
+        }
+
+        let pin_number = self.pin_number;
+        let channel = self.channel;
+
+        let state_ptr: *mut c_void = pin_number as *mut c_void;
+        unsafe {
+            esp!(sys::touch_pad_isr_register(Some(touch_handler), state_ptr)).unwrap();
+        }
+
+        unsafe {
+            CALLBACKS[channel as usize] = Some(Box::new(callback));
+        }
+    }
+}
+
+impl TouchPin {
+    fn initialize(&self) {
+        let mut event_loop = EspBackgroundEventLoop::new(&Default::default()).unwrap();
+
+        info!("About to subscribe to the background touch event loop");
+        let subscription = event_loop
+            .subscribe(move |message: &EventLoopMessage| {
+                let pin_number = message.0;
+                let channel = message.1;
+                let value = message.2;
+                info!(
+                    "Got message from the touch event loop: {} {} {:?}",
+                    pin_number, channel, value
+                );
+                let callback = unsafe { &CALLBACKS[channel as usize] };
+                if let Some(callback) = callback {
+                    callback(pin_number, value);
+                }
+
+                info!("returned from touch callback");
+
+                thread::spawn(move || {
+                    thread::sleep(Duration::new(1, 0));
+                    info!("Got touch released {} {}", pin_number, channel);
+                    let callback = unsafe { &CALLBACKS[channel as usize] };
+                    if let Some(callback) = callback {
+                        callback(pin_number, Value::High);
+                    };
+                    info!("returned from released touch callback");
+                });
+            })
+            .unwrap();
+
+        // We don't get interrupt when button is released.
+        // Setup thread to poll state until button is released.
+        // thread::spawn(move || {
+        //     // loop{
+        //     //     let mut touch_value = 0;
+        //     //     esp!(unsafe { sys::touch_pad_read_filtered(channel, &mut touch_value) }).unwrap();
+
+        //     //     if touch_value <= threshold {
+        //     //         break;
+        //     //     }
+
+        //     //     thread::sleep(Duration::new(0, 100_000));
+        //     // }
+
+        //     thread::sleep(Duration::new(1, 0));
+        //     info!("Got touch released {} {}", pin_number, channel);
+        //     let callback = unsafe { &CALLBACKS[channel as usize] };
+        //     if let Some(callback) = callback {
+        //         callback(pin_number, Value::High);
+        //     };
+        //     info!("returned from released touch callback");
+        // });
+
+        unsafe {
+            esp!(sys::touch_pad_filter_start(10)).unwrap();
+            esp!(sys::touch_pad_clear_status()).unwrap();
+            esp!(sys::touch_pad_intr_enable()).unwrap();
+        }
+
+        unsafe {
+            EVENT_LOOP = Some(event_loop);
+            SUBSCRIPTION = Some(subscription);
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
+struct EventLoopMessage(i32, sys::touch_pad_t, Value);
+
+impl EspTypedEventSource for EventLoopMessage {
+    fn source() -> *const c_types::c_char {
+        b"TOUCH-SERVICE\0".as_ptr() as *const _
+    }
+}
+impl EspTypedEventSerializer<EventLoopMessage> for EventLoopMessage {
+    fn serialize<R>(
+        event: &EventLoopMessage,
+        f: impl for<'a> FnOnce(&'a EspEventPostData) -> R,
+    ) -> R {
+        f(&unsafe { EspEventPostData::new(Self::source(), Self::event_id(), event) })
+    }
+}
+
+impl EspTypedEventDeserializer<EventLoopMessage> for EventLoopMessage {
+    fn deserialize<R>(
+        data: &EspEventFetchData,
+        f: &mut impl for<'a> FnMut(&'a EventLoopMessage) -> R,
+    ) -> R {
+        f(unsafe { data.as_payload() })
+    }
+}
+
+static mut INITIALIZED: AtomicBool = AtomicBool::new(false);
+static mut EVENT_LOOP: Option<EspBackgroundEventLoop> = None;
+static mut SUBSCRIPTION: Option<EspBackgroundSubscription> = None;
+static mut CALLBACKS: [Option<Box<Callback>>; NUM_TOUCH_PINS] = arr![None; 10];

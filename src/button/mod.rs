@@ -1,110 +1,28 @@
-// Adapted from https://github.com/tonarino/panel-firmware/blob/85540942acba71717b568b2d775ac1c21e0b199f/src/button.rs
+use std::cell::RefCell;
 use std::fmt::Debug;
 use std::fmt::Display;
+use std::sync::mpsc;
+use std::sync::Arc;
+use std::sync::Mutex;
 
 use anyhow::Result;
 
 use embedded_hal::digital::blocking::InputPin;
+use embedded_hal::digital::ErrorType;
 use std::thread;
 
+use crate::input::InputPinNotify;
+use crate::input::Value;
 use crate::messages;
+use crate::messages::Message::ButtonPress;
+use crate::messages::Message::ButtonRelease;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum ButtonId {
     Physical(usize),
     Controller(usize),
     PageUp,
     PageDown,
-}
-
-pub struct Button<T: InputPin> {
-    pin: Debouncer<T>,
-    button_state: ButtonState,
-    id: ButtonId,
-}
-
-pub enum ButtonEvent {
-    /// The button has just been pressed down.
-    Press,
-
-    /// The button was released.
-    Release,
-}
-
-enum ButtonState {
-    Released,
-    Pressed,
-}
-
-impl<T: 'static + InputPin<Error = impl Debug + Display> + Send> Button<T> {
-    pub fn new(pin: Debouncer<T>, id: ButtonId) -> Self {
-        let button_state = ButtonState::Released;
-
-        Self {
-            pin,
-            button_state,
-            id,
-        }
-    }
-
-    // pub fn is_pressed(&self) -> bool {
-    //     self.pin.is_pressed()
-    // }
-
-    pub fn poll(&mut self) -> Option<ButtonEvent> {
-        self.pin.poll();
-
-        match self.button_state {
-            ButtonState::Released => {
-                if self.pin.is_pressed() {
-                    self.button_state = ButtonState::Pressed;
-                    return Some(ButtonEvent::Press);
-                }
-            }
-            ButtonState::Pressed => {
-                if !self.pin.is_pressed() {
-                    self.button_state = ButtonState::Released;
-                    return Some(ButtonEvent::Release);
-                }
-            }
-        }
-
-        None
-    }
-
-    pub fn connect(mut self, tx: messages::Sender) {
-        thread::spawn(move || {
-            let frequency = self.pin.get_sample_frequency();
-            let duration = std::time::Duration::new(0, 1_000_000_000 / frequency as u32);
-
-            loop {
-                thread::sleep(duration);
-
-                match self.poll() {
-                    Some(ButtonEvent::Press) => {
-                        tx.send(messages::Message::ButtonPress(self.id.clone()))
-                            .unwrap();
-                    }
-                    Some(ButtonEvent::Release) => {
-                        tx.send(messages::Message::ButtonRelease(self.id.clone()))
-                            .unwrap();
-                    }
-                    _ => {}
-                }
-            }
-        });
-    }
-}
-
-// Debouncer code inspired by Kenneth Kuhn's C debouncer:
-// http://www.kennethkuhn.com/electronics/debounce.c
-pub struct Debouncer<T: InputPin> {
-    sample_frequency: u16,
-    pin: T,
-    integrator: u8,
-    max: u8,
-    output: bool,
-    active_mode: Active,
 }
 
 #[allow(dead_code)]
@@ -113,66 +31,120 @@ pub enum Active {
     High,
 }
 
-impl<T: InputPin<Error = impl Debug + Display>> Debouncer<T> {
-    pub fn new(pin: T, active_mode: Active, debounce_time_ms: u16, sample_frequency: u16) -> Self {
-        let max = ((debounce_time_ms as f32 / 1000.0) * sample_frequency as f32) as u8;
+type Callback = Box<dyn Fn(i32, Value) + Send>;
 
-        let integrator = match active_mode {
-            Active::Low => max,
-            Active::High => 0,
+pub fn button<T: InputPinNotify<Error = impl Debug + Display>>(
+    pin: T,
+    active: Active,
+    id: ButtonId,
+    tx: messages::Sender,
+) {
+    let value: RefCell<Option<Value>> = RefCell::new(None);
+    pin.subscribe(move |pin_number, v| {
+        println!("{} {} {:?}", pin_number, v, id);
+        let pressed = matches!(
+            (&active, v),
+            (Active::Low, Value::Low) | (Active::High, Value::High)
+        );
+
+        let has_changed = match (*value.borrow(), v) {
+            (None, _) => true,
+            (Some(Value::High), Value::Low) => true,
+            (Some(Value::Low), Value::High) => true,
+            (Some(_), _) => false,
         };
 
-        let output = match active_mode {
-            Active::Low => true,
-            Active::High => false,
-        };
-
-        Self {
-            pin,
-            integrator,
-            max,
-            output,
-            active_mode,
-            sample_frequency,
+        if has_changed {
+            let id = id.clone();
+            if pressed {
+                tx.send(ButtonPress(id)).unwrap();
+            } else {
+                tx.send(ButtonRelease(id)).unwrap();
+            }
+            *value.borrow_mut() = Some(v);
         }
-    }
+    });
+}
 
-    pub fn poll(&mut self) {
-        if self.pin.is_low().unwrap() {
-            self.integrator = self.integrator.saturating_sub(1);
-        } else if self.integrator < self.max {
-            self.integrator += 1;
+pub struct Debouncer {
+    value: Arc<Mutex<Value>>,
+    subscriber: Arc<Mutex<Option<Callback>>>,
+}
+
+impl Debouncer {
+    pub fn new<T: InputPinNotify<Error = impl Debug + Display>>(
+        pin: T,
+        debounce_time_ms: u16,
+    ) -> Self {
+        let (tx, rx) = mpsc::channel();
+
+        pin.subscribe(move |pin_number, value| {
+            tx.send((pin_number, value)).unwrap();
+        });
+
+        let value = Arc::new(Mutex::new(Value::Low));
+        let subscriber: Arc<Mutex<Option<Callback>>> = Arc::new(Mutex::new(None));
+
+        let value_clone = value.clone();
+        let subscriber_clone = subscriber.clone();
+
+        thread::spawn(move || {
+            for (pin_number, msg) in rx {
+                let mut value_lock = value_clone.lock().unwrap();
+                *value_lock = msg;
+                drop(value_lock);
+
+                let subscribers_lock = subscriber_clone.lock().unwrap();
+                let duration = std::time::Duration::new(0, debounce_time_ms as u32 * 1000);
+                match &*subscribers_lock {
+                    Some(s) => {
+                        (*s)(pin_number, msg);
+                    }
+                    None => {}
+                }
+                drop(subscribers_lock);
+
+                thread::sleep(duration);
+            }
+        });
+
+        Debouncer {
+            // pin: pin,
+            value,
+            subscriber,
         }
-
-        if self.integrator == 0 {
-            self.output = false;
-        } else if self.integrator >= self.max {
-            self.output = true;
-        }
-    }
-
-    pub fn is_pressed(&self) -> bool {
-        matches!(
-            (&self.active_mode, self.output),
-            (Active::High, true) | (Active::Low, false)
-        )
-    }
-
-    pub fn get_sample_frequency(&self) -> u16 {
-        self.sample_frequency
     }
 }
 
-pub fn configure_button<T: 'static + InputPin<Error = impl Debug + Display> + Send>(
+impl InputPinNotify for Debouncer {
+    fn subscribe<F: Fn(i32, Value) + Send + 'static>(&self, callback: F) {
+        let mut value = self.subscriber.lock().unwrap();
+        *value = Some(Box::new(callback));
+    }
+}
+
+impl InputPin for Debouncer {
+    fn is_high(&self) -> Result<bool, Self::Error> {
+        let value = self.value.lock().unwrap();
+        Ok(matches!(*value, Value::High))
+    }
+
+    fn is_low(&self) -> Result<bool, Self::Error> {
+        let value = self.value.lock().unwrap();
+        Ok(matches!(*value, Value::Low))
+    }
+}
+
+impl ErrorType for Debouncer {
+    type Error = anyhow::Error;
+}
+
+pub fn configure_button<T: 'static + InputPinNotify<Error = impl Debug + Display> + Send>(
     pin: T,
     tx: messages::Sender,
     id: ButtonId,
 ) -> Result<()> {
-    let frequency = 100;
-
-    let debounced_encoder_pin = Debouncer::new(pin, Active::Low, 30, frequency);
-    let encoder_button = Button::new(debounced_encoder_pin, id);
-    encoder_button.connect(tx);
-
+    let debounced_encoder_pin = Debouncer::new(pin, 30);
+    let _encoder_button = button(debounced_encoder_pin, Active::Low, id, tx);
     Ok(())
 }
