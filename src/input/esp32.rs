@@ -60,16 +60,16 @@ impl<T: 'static + Pin + InputPin + Send> InputPinNotify for T {
             unsafe { INITIALIZED.store(true, Ordering::SeqCst) };
         }
 
+        unsafe {
+            CALLBACKS[pin_number as usize] = Some(Box::new(callback));
+        }
+
         let state_ptr: *mut c_void = pin_number as *mut c_void;
         unsafe {
             // esp_idf_sys::rtc_gpio_deinit(pin_number);
             esp_idf_sys::gpio_set_intr_type(pin_number, gpio_int_type_t_GPIO_INTR_ANYEDGE);
             esp_idf_sys::gpio_isr_handler_add(pin_number, Some(gpio_handler), state_ptr);
             // esp_idf_sys::gpio_intr_enable(pin_number);
-        }
-
-        unsafe {
-            CALLBACKS[pin_number as usize] = Some(Box::new(callback));
         }
     }
 }

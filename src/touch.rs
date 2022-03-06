@@ -130,13 +130,13 @@ impl InputPinNotify for TouchPin {
         let pin_number = self.pin_number;
         let channel = self.channel;
 
+        unsafe {
+            CALLBACKS[channel as usize] = Some(Box::new(callback));
+        }
+
         let state_ptr: *mut c_void = pin_number as *mut c_void;
         unsafe {
             esp!(sys::touch_pad_isr_register(Some(touch_handler), state_ptr)).unwrap();
-        }
-
-        unsafe {
-            CALLBACKS[channel as usize] = Some(Box::new(callback));
         }
     }
 }
