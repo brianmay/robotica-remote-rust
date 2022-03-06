@@ -11,9 +11,9 @@ use embedded_hal::digital::blocking::InputPin;
 use embedded_hal::digital::ErrorType;
 use std::thread;
 
+use crate::input::InputNotifyCallback;
 use crate::input::InputPinNotify;
 use crate::input::Value;
-use crate::input::InputNotifyCallback;
 use crate::messages;
 use crate::messages::Message::ButtonPress;
 use crate::messages::Message::ButtonRelease;
