@@ -28,6 +28,6 @@ jobs:
       - name: Build | Fmt Check
         run: cargo fmt -- --check
       - name: Build | Clippy
-        run: WIFI_SSID=ssid WIFI_PASS=pass MQTT_URL=mqtt://example.org cargo clippy --no-deps -- -Dwarnings
+        run: WIFI_SSID=ssid WIFI_PASS=pass MQTT_URL=mqtt://example.org cargo clippy --features native --no-deps -- -Dwarnings
       - name: Build | Compile
-        run: WIFI_SSID=ssid WIFI_PASS=pass MQTT_URL=mqtt://example.org cargo build
+        run: WIFI_SSID=ssid WIFI_PASS=pass MQTT_URL=mqtt://example.org cargo build --features native
