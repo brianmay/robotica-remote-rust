@@ -13,6 +13,7 @@ use std::thread;
 
 use crate::input::InputPinNotify;
 use crate::input::Value;
+use crate::input::InputNotifyCallback;
 use crate::messages;
 use crate::messages::Message::ButtonPress;
 use crate::messages::Message::ButtonRelease;
@@ -30,8 +31,6 @@ pub enum Active {
     Low,
     High,
 }
-
-type Callback = Box<dyn Fn(i32, Value) + Send>;
 
 pub fn button<T: InputPinNotify<Error = impl Debug + Display>>(
     pin: T,
@@ -68,7 +67,7 @@ pub fn button<T: InputPinNotify<Error = impl Debug + Display>>(
 
 pub struct Debouncer {
     value: Arc<Mutex<Value>>,
-    subscriber: Arc<Mutex<Option<Callback>>>,
+    subscriber: Arc<Mutex<Option<InputNotifyCallback>>>,
 }
 
 impl Debouncer {
@@ -83,7 +82,7 @@ impl Debouncer {
         });
 
         let value = Arc::new(Mutex::new(Value::Low));
-        let subscriber: Arc<Mutex<Option<Callback>>> = Arc::new(Mutex::new(None));
+        let subscriber: Arc<Mutex<Option<InputNotifyCallback>>> = Arc::new(Mutex::new(None));
 
         let value_clone = value.clone();
         let subscriber_clone = subscriber.clone();

@@ -26,7 +26,7 @@ use embedded_hal::digital::ErrorType;
 use embedded_svc::event_bus::EventBus;
 use embedded_svc::event_bus::Postbox;
 
-use crate::input::{Callback, InputPinNotify, Value};
+use crate::input::{InputNotifyCallback, InputPinNotify, Value};
 
 const NUM_TOUCH_PINS: usize = 10;
 
@@ -239,4 +239,4 @@ impl EspTypedEventDeserializer<EventLoopMessage> for EventLoopMessage {
 static mut INITIALIZED: AtomicBool = AtomicBool::new(false);
 static mut EVENT_LOOP: Option<EspBackgroundEventLoop> = None;
 static mut SUBSCRIPTION: Option<EspBackgroundSubscription> = None;
-static mut CALLBACKS: [Option<Box<Callback>>; NUM_TOUCH_PINS] = arr![None; 10];
+static mut CALLBACKS: [Option<InputNotifyCallback>; NUM_TOUCH_PINS] = arr![None; 10];

@@ -18,9 +18,7 @@ use esp_idf_sys::{
 
 use super::*;
 
-// static CALLBACKS: [Option<fn()>; 40] = arr![None; 40];
-
-// static mut TX: [Option<mpsc::Sender<Message>>; 32] = arr![None; 32];
+const NUM_PINS: usize = 40;
 
 #[derive(Copy, Clone, Debug)]
 struct EventLoopMessage(i32, Value);
@@ -51,7 +49,7 @@ impl EspTypedEventDeserializer<EventLoopMessage> for EventLoopMessage {
 static mut INITIALIZED: AtomicBool = AtomicBool::new(false);
 static mut EVENT_LOOP: Option<EspBackgroundEventLoop> = None;
 static mut SUBSCRIPTION: Option<EspBackgroundSubscription> = None;
-static mut CALLBACKS: [Option<Box<Callback>>; 40] = arr![None; 40];
+static mut CALLBACKS: [Option<InputNotifyCallback>; NUM_PINS] = arr![None; 40];
 
 impl<T: 'static + Pin + InputPin + Send> InputPinNotify for T {
     fn subscribe<F: Fn(i32, Value) + Send + 'static>(&self, callback: F) {

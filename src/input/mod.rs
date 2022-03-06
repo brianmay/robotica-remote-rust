@@ -10,7 +10,7 @@ pub enum Value {
     High,
 }
 
-pub type Callback = dyn Fn(i32, Value) + Send + 'static;
+pub type InputNotifyCallback = Box<dyn Fn(i32, Value) + Send + 'static>;
 
 impl Display for Value {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
