@@ -8,8 +8,8 @@ use log::*;
 
 use crate::button;
 use crate::display;
+use crate::input::esp32::TouchControllerBuilder;
 use crate::messages;
-use crate::touch;
 use crate::wifi;
 
 pub const NUM_DISPLAYS: usize = display::lca2021_badge::NUM_DISPLAYS;
@@ -31,7 +31,7 @@ pub fn configure_devices(
     let pin = pins.gpio17.into_input().unwrap();
     button::configure_button(pin, tx.clone(), button::ButtonId::Physical(1))?;
 
-    let mut touch_builder = touch::TouchControllerBuilder::new().unwrap();
+    let mut touch_builder = TouchControllerBuilder::new().unwrap();
     let touch_pin1 = touch_builder.add_pin(pins.gpio15, 400).unwrap();
     let touch_pin2 = touch_builder.add_pin(pins.gpio12, 400).unwrap();
     let touch_pin3 = touch_builder.add_pin(pins.gpio27, 400).unwrap();

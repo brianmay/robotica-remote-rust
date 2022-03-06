@@ -16,7 +16,7 @@ use esp_idf_sys::{
     gpio_int_type_t_GPIO_INTR_ANYEDGE,
 };
 
-use super::*;
+use super::super::*;
 
 const NUM_PINS: usize = 40;
 

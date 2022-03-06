@@ -27,7 +27,6 @@ mod config;
 mod input;
 mod messages;
 mod mqtt;
-mod touch;
 mod wifi;
 
 const MQTT_URL: &str = env!("MQTT_URL");
