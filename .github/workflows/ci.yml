@@ -20,15 +20,14 @@ jobs:
         with:
           toolchain: nightly
           components: rustfmt, clippy
-      - name: Setup | Std
-        run: rustup component add rust-src --toolchain nightly-x86_64-unknown-linux-gnu
-      - name: Setup | Default to nightly
-        run: rustup default nightly
-      - name: Setup | ldproxy
-        run: cargo install ldproxy
+      - name: Install Rust for Xtensa
+        uses: esp-rs/xtensa-toolchain@v1
+        with:
+          default: true
+          ldproxy: true
       - name: Build | Fmt Check
         run: cargo fmt -- --check
       - name: Build | Clippy
-        run: WIFI_SSID=ssid WIFI_PASS=pass MQTT_URL=mqtt://example.org cargo clippy --no-deps --target riscv32imc-esp-espidf -- -Dwarnings
+        run: WIFI_SSID=ssid WIFI_PASS=pass MQTT_URL=mqtt://example.org cargo clippy --no-deps -- -Dwarnings
       - name: Build | Compile
-        run: WIFI_SSID=ssid WIFI_PASS=pass MQTT_URL=mqtt://example.org cargo build --target riscv32imc-esp-espidf
+        run: WIFI_SSID=ssid WIFI_PASS=pass MQTT_URL=mqtt://example.org cargo build
