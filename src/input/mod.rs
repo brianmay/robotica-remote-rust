@@ -4,7 +4,7 @@ use embedded_hal::digital::blocking::InputPin;
 
 pub mod esp32;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, std::cmp::PartialEq)]
 pub enum Value {
     Low,
     High,
