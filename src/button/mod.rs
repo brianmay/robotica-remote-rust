@@ -1,10 +1,10 @@
 use std::cell::RefCell;
 use std::fmt::Debug;
 use std::fmt::Display;
-use std::sync::RwLock;
 use std::sync::mpsc;
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::sync::RwLock;
 
 use anyhow::Result;
 
