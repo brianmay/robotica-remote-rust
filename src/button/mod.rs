@@ -2,14 +2,16 @@ use std::cell::RefCell;
 use std::fmt::Debug;
 use std::fmt::Display;
 use std::sync::mpsc;
-use std::sync::Arc;
-use std::sync::Mutex;
-use std::sync::RwLock;
+use std::time::Duration;
 
 use anyhow::Result;
 
 use embedded_hal::digital::blocking::InputPin;
 use embedded_hal::digital::ErrorType;
+use embedded_svc::timer::OnceTimer;
+use embedded_svc::timer::Timer;
+use embedded_svc::timer::TimerService;
+use esp_idf_svc::timer::EspTimerService;
 use std::thread;
 
 use crate::input::InputNotifyCallback;
@@ -40,8 +42,7 @@ pub fn button<T: InputPinNotify<Error = impl Debug + Display>>(
     tx: messages::Sender,
 ) {
     let value: RefCell<Option<Value>> = RefCell::new(None);
-    pin.subscribe(move |pin_number, v| {
-        println!("{} {} {:?}", pin_number, v, id);
+    pin.subscribe(move |v| {
         let pressed = matches!(
             (&active, v),
             (Active::Low, Value::Low) | (Active::High, Value::High)
@@ -66,94 +67,126 @@ pub fn button<T: InputPinNotify<Error = impl Debug + Display>>(
     });
 }
 
+enum DebouncerMessage {
+    Input(Value),
+    Subscribe(InputNotifyCallback),
+    GetValue(mpsc::Sender<Option<Value>>),
+    Timer,
+}
+
 pub struct Debouncer {
-    value: Arc<RwLock<Value>>,
-    subscriber: Arc<Mutex<Option<InputNotifyCallback>>>,
+    tx: mpsc::Sender<DebouncerMessage>,
 }
 
 impl Debouncer {
-    pub fn new<T: InputPinNotify<Error = impl Debug + Display>>(
+    pub fn new<T: InputPinNotify<Error = impl Debug + Display> + Send + 'static>(
         pin: T,
         debounce_time_ms: u16,
     ) -> Self {
         let (tx, rx) = mpsc::channel();
+        let debounce_time = Duration::from_millis(debounce_time_ms as u64);
 
-        pin.subscribe(move |pin_number, value| {
-            tx.send((pin_number, value)).unwrap();
+        let tx_clone = tx.clone();
+        pin.subscribe(move |value| {
+            tx_clone.send(DebouncerMessage::Input(value)).unwrap();
         });
 
-        let value = Arc::new(RwLock::new(Value::High));
-        let subscriber: Arc<Mutex<Option<InputNotifyCallback>>> = Arc::new(Mutex::new(None));
-
-        let value_clone = value.clone();
-        let subscriber_clone = subscriber.clone();
+        let tx_clone = tx.clone();
+        let mut timer_service = EspTimerService::new().unwrap();
+        let mut timer = timer_service
+            .timer(move || {
+                tx_clone.send(DebouncerMessage::Timer).unwrap();
+            })
+            .unwrap();
 
         thread::spawn(move || {
-            for (pin_number, state) in rx.iter() {
-                // Notify of state change
-                notify(&value_clone, &subscriber_clone, pin_number, state);
+            let mut timer_set = false;
+            let mut value: Option<Value> = None;
+            let mut raw_value: Option<Value> = value;
+            let mut subscriber: Option<InputNotifyCallback> = None;
 
-                // Wait for debounce time
-                let duration = std::time::Duration::from_millis(debounce_time_ms as u64);
-                thread::sleep(duration);
-
-                // discard events received during debounce but keep last state
-                let mut new_state = state;
-                for (_, tmp_state) in rx.try_iter() {
-                    new_state = tmp_state;
-                }
-
-                // If state changed during debounce, notify new state
-                if new_state != state {
-                    notify(&value_clone, &subscriber_clone, pin_number, new_state);
+            for msg in rx.iter() {
+                match msg {
+                    DebouncerMessage::Input(new_value) => {
+                        if !timer_set {
+                            // println!("Got first value {:?}", value);
+                            value = Some(new_value);
+                            notify(&subscriber, value);
+                            timer.cancel().unwrap();
+                            timer.after(debounce_time).unwrap();
+                            timer_set = true;
+                        } else {
+                            // println!("Ignoring value {:?}", value);
+                        }
+                        raw_value = Some(new_value);
+                    }
+                    DebouncerMessage::Subscribe(new_subscriber) => {
+                        // println!("Adding subscribe");
+                        subscriber = Some(new_subscriber);
+                    }
+                    DebouncerMessage::GetValue(reply_tx) => {
+                        let out_value = if value.is_some() {
+                            value
+                        } else if pin.is_high().unwrap_or(false) {
+                            Some(Value::High)
+                        } else if pin.is_low().unwrap_or(false) {
+                            Some(Value::Low)
+                        } else {
+                            None
+                        };
+                        reply_tx.send(out_value).unwrap();
+                    }
+                    DebouncerMessage::Timer => {
+                        // println!("Got timer");
+                        if value != raw_value {
+                            value = raw_value;
+                            // println!("Sending {:?}", value);
+                            notify(&subscriber, value);
+                        }
+                        timer_set = false;
+                    }
                 }
             }
         });
 
-        Debouncer {
-            // pin: pin,
-            value,
-            subscriber,
-        }
+        Debouncer { tx }
+    }
+
+    fn get_value(&self) -> Option<Value> {
+        let (tx, rx) = mpsc::channel();
+        self.tx.send(DebouncerMessage::GetValue(tx)).unwrap();
+        rx.recv().unwrap()
     }
 }
 
-fn notify(
-    value: &Arc<RwLock<Value>>,
-    subscribe: &Arc<Mutex<Option<InputNotifyCallback>>>,
-    pin_number: i32,
-    new_state: Value,
-) {
-    let mut value_lock = value.write().unwrap();
-    *value_lock = new_state;
-    drop(value_lock);
-
-    let subscribers_lock = subscribe.lock().unwrap();
-    match &*subscribers_lock {
-        Some(s) => {
-            (*s)(pin_number, new_state);
+fn notify(subscriber: &Option<InputNotifyCallback>, new_state: Option<Value>) {
+    if let Some(new_state) = new_state {
+        match subscriber {
+            Some(s) => {
+                (*s)(new_state);
+            }
+            None => {}
         }
-        None => {}
     }
-    drop(subscribers_lock);
 }
 
 impl InputPinNotify for Debouncer {
-    fn subscribe<F: Fn(i32, Value) + Send + 'static>(&self, callback: F) {
-        let mut value = self.subscriber.lock().unwrap();
-        *value = Some(Box::new(callback));
+    fn subscribe<F: Fn(Value) + Send + 'static>(&self, callback: F) {
+        self.tx
+            .send(DebouncerMessage::Subscribe(Box::new(callback)))
+            .unwrap();
     }
 }
 
 impl InputPin for Debouncer {
     fn is_high(&self) -> Result<bool, Self::Error> {
-        let value = self.value.read().unwrap();
-        Ok(matches!(*value, Value::High))
+        let value = self.get_value();
+        Ok(matches!(value, Some(Value::High)))
     }
 
     fn is_low(&self) -> Result<bool, Self::Error> {
-        let value = self.value.read().unwrap();
-        Ok(matches!(*value, Value::Low))
+        let value = self.get_value();
+        Ok(matches!(value, Some(Value::Low)))
     }
 }
 

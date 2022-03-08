@@ -10,7 +10,7 @@ pub enum Value {
     High,
 }
 
-pub type InputNotifyCallback = Box<dyn Fn(i32, Value) + Send + 'static>;
+pub type InputNotifyCallback = Box<dyn Fn(Value) + Send + 'static>;
 
 impl Display for Value {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -21,5 +21,5 @@ impl Display for Value {
     }
 }
 pub trait InputPinNotify: InputPin {
-    fn subscribe<F: Fn(i32, Value) + Send + 'static>(&self, callback: F);
+    fn subscribe<F: Fn(Value) + Send + 'static>(&self, callback: F);
 }

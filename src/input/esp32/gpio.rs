@@ -52,7 +52,7 @@ static mut SUBSCRIPTION: Option<EspBackgroundSubscription> = None;
 static mut CALLBACKS: [Option<InputNotifyCallback>; NUM_PINS] = arr![None; 40];
 
 impl<T: 'static + Pin + InputPin + Send> InputPinNotify for T {
-    fn subscribe<F: Fn(i32, Value) + Send + 'static>(&self, callback: F) {
+    fn subscribe<F: Fn(Value) + Send + 'static>(&self, callback: F) {
         let pin_number: i32 = self.pin();
 
         if unsafe { !INITIALIZED.load(Ordering::SeqCst) } {
@@ -88,7 +88,7 @@ fn initialize() {
             );
             let callback = unsafe { &CALLBACKS[pin_number as usize] };
             if let Some(callback) = callback {
-                callback(pin_number, value);
+                callback(value);
             }
             info!("returned from callback");
         })

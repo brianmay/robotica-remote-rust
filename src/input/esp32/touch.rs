@@ -119,7 +119,7 @@ impl InputPin for TouchPin {
 }
 
 impl InputPinNotify for TouchPin {
-    fn subscribe<F: Fn(i32, crate::input::Value) + Send + 'static>(&self, callback: F) {
+    fn subscribe<F: Fn(crate::input::Value) + Send + 'static>(&self, callback: F) {
         info!("About to start a background touch event loop");
 
         if unsafe { !INITIALIZED.load(Ordering::SeqCst) } {
@@ -157,7 +157,7 @@ impl TouchPin {
                 );
                 let callback = unsafe { &CALLBACKS[channel as usize] };
                 if let Some(callback) = callback {
-                    callback(pin_number, value);
+                    callback(value);
                 }
 
                 info!("returned from touch callback");
@@ -167,7 +167,7 @@ impl TouchPin {
                     info!("Got touch released {} {}", pin_number, channel);
                     let callback = unsafe { &CALLBACKS[channel as usize] };
                     if let Some(callback) = callback {
-                        callback(pin_number, Value::High);
+                        callback(Value::High);
                     };
                     info!("returned from released touch callback");
                 });
