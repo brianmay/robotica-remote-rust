@@ -3,8 +3,6 @@
 use std::ffi::c_void;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
-use std::thread;
-use std::time::Duration;
 use sys::c_types;
 
 use arr_macro::arr;
@@ -148,54 +146,21 @@ impl TouchPin {
         info!("About to subscribe to the background touch event loop");
         let subscription = event_loop
             .subscribe(move |message: &EventLoopMessage| {
-                let pin_number = message.0;
+                // let pin_number = message.0;
                 let channel = message.1;
                 let value = message.2;
-                info!(
-                    "Got message from the touch event loop: {} {} {:?}",
-                    pin_number, channel, value
-                );
+                // info!(
+                //     "Got message from the touch event loop: {} {} {:?}",
+                //     pin_number, channel, value
+                // );
                 let callback = unsafe { &CALLBACKS[channel as usize] };
                 if let Some(callback) = callback {
                     callback(value);
                 }
 
-                info!("returned from touch callback");
-
-                thread::spawn(move || {
-                    thread::sleep(Duration::new(1, 0));
-                    info!("Got touch released {} {}", pin_number, channel);
-                    let callback = unsafe { &CALLBACKS[channel as usize] };
-                    if let Some(callback) = callback {
-                        callback(Value::High);
-                    };
-                    info!("returned from released touch callback");
-                });
+                // info!("returned from touch callback");
             })
             .unwrap();
-
-        // We don't get interrupt when button is released.
-        // Setup thread to poll state until button is released.
-        // thread::spawn(move || {
-        //     // loop{
-        //     //     let mut touch_value = 0;
-        //     //     esp!(unsafe { sys::touch_pad_read_filtered(channel, &mut touch_value) }).unwrap();
-
-        //     //     if touch_value <= threshold {
-        //     //         break;
-        //     //     }
-
-        //     //     thread::sleep(Duration::new(0, 100_000));
-        //     // }
-
-        //     thread::sleep(Duration::new(1, 0));
-        //     info!("Got touch released {} {}", pin_number, channel);
-        //     let callback = unsafe { &CALLBACKS[channel as usize] };
-        //     if let Some(callback) = callback {
-        //         callback(pin_number, Value::High);
-        //     };
-        //     info!("returned from released touch callback");
-        // });
 
         unsafe {
             esp!(sys::touch_pad_filter_start(10)).unwrap();

@@ -37,10 +37,10 @@ pub fn configure_devices(
     let touch_pin3 = touch_builder.add_pin(pins.gpio27, 400).unwrap();
     let touch_pin4 = touch_builder.add_pin(pins.gpio14, 400).unwrap();
 
-    button::configure_button(touch_pin1, tx.clone(), button::ButtonId::PageUp)?;
-    button::configure_button(touch_pin2, tx.clone(), button::ButtonId::PageDown)?;
-    button::configure_button(touch_pin3, tx.clone(), button::ButtonId::Controller(0))?;
-    button::configure_button(touch_pin4, tx, button::ButtonId::Controller(1))?;
+    button::configure_touch_button(touch_pin1, tx.clone(), button::ButtonId::PageUp)?;
+    button::configure_touch_button(touch_pin2, tx.clone(), button::ButtonId::PageDown)?;
+    button::configure_touch_button(touch_pin3, tx.clone(), button::ButtonId::Controller(0))?;
+    button::configure_touch_button(touch_pin4, tx, button::ButtonId::Controller(1))?;
 
     Ok((Box::new(wifi), display))
 }
