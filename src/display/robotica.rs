@@ -47,7 +47,7 @@ fn display_thread(
                     crate::button_controllers::DisplayState::Unknown => (1, 0, 0),
                     crate::button_controllers::DisplayState::On => (0, 1, 0),
                     crate::button_controllers::DisplayState::Off => (0, 0, 1),
-                    crate::button_controllers::DisplayState::OnOther => (0, 0, 0),
+                    crate::button_controllers::DisplayState::OnOther => (0, 1, 1),
                 };
 
                 let color = RGB::from(color);
