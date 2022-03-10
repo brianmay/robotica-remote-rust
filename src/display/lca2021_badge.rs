@@ -16,9 +16,9 @@ use embedded_graphics::pixelcolor::*;
 
 use crate::messages::Sender;
 
-use super::display_thread;
+use super::graphics::display_thread;
+use super::graphics::FlushableDrawTarget;
 use super::DisplayCommand;
-use super::FlushableDrawTarget;
 
 use i2c::{Master, I2C0};
 use shared_bus::BusManager;

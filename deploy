@@ -1,0 +1,4 @@
+#!/bin/sh
+set -e
+set -x
+cargo build && espflash --speed 921600 /dev/ttyUSB0 target/xtensa-esp32-espidf/debug/robotica-remote-rust && espmonitor /dev/ttyUSB0 --bin target/xtensa-esp32-espidf/debug/robotica-remote-rust\

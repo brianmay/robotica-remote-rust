@@ -281,7 +281,7 @@ fn main() -> Result<()> {
                 requested_display_status.got_timer();
                 do_blank(&display, &mut timer, &requested_display_status, &mut status);
             }
-            Message::DisplayPage(number) => {
+            Message::PageIsDisplayed(number) => {
                 page = number;
             }
         }
