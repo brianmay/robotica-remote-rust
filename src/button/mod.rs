@@ -106,23 +106,21 @@ impl Debouncer {
         thread::spawn(move || {
             let mut timer_set = false;
             let mut value: Option<Value> = None;
-            let mut raw_value: Option<Value> = value;
             let mut subscriber: Option<InputNotifyCallback> = None;
 
             for msg in rx.iter() {
                 match msg {
                     DebouncerMessage::Input(new_value) => {
                         if !timer_set {
-                            // println!("Got first value {:?}", new_value);
+                            // println!("Got first value {new_value:?}");
                             value = Some(new_value);
                             notify(&subscriber, value);
                             timer.cancel().unwrap();
                             timer.after(debounce_time).unwrap();
                             timer_set = true;
                         } else {
-                            // println!("Ignoring value {:?}", value);
+                            // println!("Ignoring value {new_value:?}");
                         }
-                        raw_value = Some(new_value);
                     }
                     DebouncerMessage::Subscribe(new_subscriber) => {
                         // println!("Adding subscribe");
@@ -141,7 +139,14 @@ impl Debouncer {
                         reply_tx.send(out_value).unwrap();
                     }
                     DebouncerMessage::Timer => {
-                        // println!("Got timer");
+                        let raw_value = if pin.is_high().unwrap_or(false) {
+                            Some(Value::High)
+                        } else if pin.is_low().unwrap_or(false) {
+                            Some(Value::Low)
+                        } else {
+                            None
+                        };
+                        // println!("Got timer {value:?} {raw_value:?}");
                         if value != raw_value {
                             value = raw_value;
                             // println!("Sending {:?}", value);
