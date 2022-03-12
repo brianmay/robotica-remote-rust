@@ -76,25 +76,21 @@ fn update_display(
     display: &mpsc::Sender<DisplayCommand>,
     id: usize,
     controller: &dyn button_controllers::Controller,
-    status: &ActualDisplayStatus,
     state: button_controllers::DisplayState,
 ) {
     let icon = controller.get_icon();
     let name = controller.get_name();
-    if status.display_on {
-        let message = DisplayCommand::DisplayState(state, icon, id, name);
-        display.send(message).unwrap();
-    }
+    let message = DisplayCommand::DisplayState(state, icon, id, name);
+    display.send(message).unwrap();
 }
 
 fn update_displays(
     display: &mpsc::Sender<DisplayCommand>,
     controllers: &[Box<dyn button_controllers::Controller>],
-    status: &ActualDisplayStatus,
 ) {
     for (id, controller) in controllers.iter().enumerate() {
         let state = controller.get_display_state();
-        update_display(display, id, controller.as_ref(), status, state);
+        update_display(display, id, controller.as_ref(), state);
     }
 }
 
@@ -209,7 +205,14 @@ fn main() -> Result<()> {
         timer_on: false,
     };
 
-    update_displays(&display, &controllers, &status);
+    do_blank(
+        &display,
+        &mut timer,
+        &requested_display_status,
+        &mut status,
+        false,
+    );
+    update_displays(&display, &controllers);
 
     let mut page = 0;
 
@@ -253,7 +256,7 @@ fn main() -> Result<()> {
                     );
                 }
                 if old_state != state {
-                    update_display(&display, id, controller.as_ref(), &status, state);
+                    update_display(&display, id, controller.as_ref(), state);
                 }
             }
             Message::MqttConnect => {
@@ -264,7 +267,7 @@ fn main() -> Result<()> {
                 for controller in controllers.iter_mut() {
                     controller.process_disconnected();
                 }
-                update_displays(&display, &controllers, &status);
+                update_displays(&display, &controllers);
             }
             Message::ButtonPress(ButtonId::Physical(id)) => {
                 if status.display_on {
