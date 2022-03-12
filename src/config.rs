@@ -8,6 +8,7 @@ use crate::button_controllers::Icon;
 
 pub const NUM_CONTROLLERS: usize = 5;
 pub const NIGHT_TOPIC: &str = "state/Brian/Night/power";
+pub const NIGHT_CONTROLLER: usize = 0;
 
 pub fn get_controllers_config() -> [Box<dyn Config>; NUM_CONTROLLERS] {
     [

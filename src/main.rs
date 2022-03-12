@@ -18,6 +18,7 @@ use button::ButtonId;
 mod button_controllers;
 
 mod display;
+use crate::button_controllers::DisplayState;
 use crate::display::DisplayCommand;
 use crate::messages::Message;
 
@@ -37,9 +38,15 @@ include!(env!("EMBUILD_GENERATED_SYMBOLS_FILE"));
 #[cfg(esp32s2)]
 const ULP: &[u8] = include_bytes!(env!("EMBUILD_GENERATED_BIN_FILE"));
 
-enum RequestedDisplayStatus {
+enum TimeOfDay {
     Day,
-    Night(bool),
+    Night,
+}
+
+struct RequestedDisplayStatus {
+    time_of_day: TimeOfDay,
+    forced_on: bool,
+    night_timer: bool,
 }
 
 struct ActualDisplayStatus {
@@ -49,26 +56,19 @@ struct ActualDisplayStatus {
 
 impl RequestedDisplayStatus {
     fn get_timer_required(&self) -> bool {
-        matches!(self, RequestedDisplayStatus::Night(true))
+        self.night_timer
     }
 
     fn get_display_required(&self) -> bool {
-        match self {
-            RequestedDisplayStatus::Day => true,
-            RequestedDisplayStatus::Night(display_on) => *display_on,
-        }
+        matches!(self.time_of_day, TimeOfDay::Day) || self.forced_on || self.night_timer
     }
 
-    fn reset_timer(&mut self) {
-        if let RequestedDisplayStatus::Night(false) = self {
-            *self = RequestedDisplayStatus::Night(true);
-        }
+    fn turn_night_timer_on(&mut self) {
+        self.night_timer = true;
     }
 
-    fn got_timer(&mut self) {
-        if let RequestedDisplayStatus::Night(true) = self {
-            *self = RequestedDisplayStatus::Night(false);
-        }
+    fn turn_night_timer_off(&mut self) {
+        self.night_timer = false;
     }
 }
 
@@ -103,13 +103,22 @@ fn do_blank(
     timer: &mut EspTimer,
     requested_display_status: &RequestedDisplayStatus,
     status: &mut ActualDisplayStatus,
+    force_timer_reset: bool,
 ) {
     let timer_required = requested_display_status.get_timer_required();
     let display_required = requested_display_status.get_display_required();
 
     match (timer_required, status.timer_on) {
-        (true, _) => {
-            info!("(re)starting blank timer");
+        (true, true) => {
+            if force_timer_reset {
+                info!("resetting blank timer");
+                timer.cancel().unwrap();
+                timer.after(std::time::Duration::new(10, 0)).unwrap();
+                status.timer_on = true;
+            }
+        }
+        (true, false) => {
+            info!("starting blank timer");
             timer.cancel().unwrap();
             timer.after(std::time::Duration::new(10, 0)).unwrap();
             status.timer_on = true;
@@ -190,7 +199,11 @@ fn main() -> Result<()> {
         })
         .unwrap();
 
-    let mut requested_display_status: RequestedDisplayStatus = RequestedDisplayStatus::Day;
+    let mut requested_display_status: RequestedDisplayStatus = RequestedDisplayStatus {
+        time_of_day: TimeOfDay::Day,
+        forced_on: false,
+        night_timer: false,
+    };
     let mut status: ActualDisplayStatus = ActualDisplayStatus {
         display_on: true,
         timer_on: false,
@@ -203,13 +216,18 @@ fn main() -> Result<()> {
     for received in rx {
         match received {
             Message::MqttReceived(_, power, mqtt::Label::NightStatus) => {
-                requested_display_status = match (&requested_display_status, power.as_str()) {
-                    (RequestedDisplayStatus::Day, "ON") => RequestedDisplayStatus::Night(false),
-                    (_, "ON") => requested_display_status,
-                    (_, "OFF") => RequestedDisplayStatus::Day,
-                    (_, _) => requested_display_status,
+                match power.as_str() {
+                    "ON" => requested_display_status.time_of_day = TimeOfDay::Night,
+                    "OFF" => requested_display_status.time_of_day = TimeOfDay::Day,
+                    _ => {}
                 };
-                do_blank(&display, &mut timer, &requested_display_status, &mut status);
+                do_blank(
+                    &display,
+                    &mut timer,
+                    &requested_display_status,
+                    &mut status,
+                    false,
+                );
             }
             Message::MqttReceived(topic, data, mqtt::Label::Button(id, sid)) => {
                 info!("Got message: {} - {}", topic, data);
@@ -217,6 +235,23 @@ fn main() -> Result<()> {
                 let old_state = controller.get_display_state();
                 controller.process_message(sid, data);
                 let state = controller.get_display_state();
+                if id == config::NIGHT_CONTROLLER {
+                    match state {
+                        DisplayState::Off => requested_display_status.forced_on = false,
+                        DisplayState::HardOff => requested_display_status.forced_on = false,
+                        DisplayState::On => requested_display_status.forced_on = true,
+                        DisplayState::OnOther => requested_display_status.forced_on = true,
+                        DisplayState::Error => {}
+                        DisplayState::Unknown => {}
+                    }
+                    do_blank(
+                        &display,
+                        &mut timer,
+                        &requested_display_status,
+                        &mut status,
+                        false,
+                    );
+                }
                 if old_state != state {
                     update_display(&display, id, controller.as_ref(), &status, state);
                 }
@@ -237,49 +272,97 @@ fn main() -> Result<()> {
                     button_press(&mut controllers, id, &mqtt);
                     display.send(DisplayCommand::ButtonPressed(id)).unwrap();
                 }
-                requested_display_status.reset_timer();
-                do_blank(&display, &mut timer, &requested_display_status, &mut status);
+                requested_display_status.turn_night_timer_on();
+                do_blank(
+                    &display,
+                    &mut timer,
+                    &requested_display_status,
+                    &mut status,
+                    true,
+                );
             }
             Message::ButtonPress(ButtonId::Controller(id)) => {
                 button_press(&mut controllers, id, &mqtt);
                 display.send(DisplayCommand::ButtonPressed(id)).unwrap();
-                requested_display_status.reset_timer();
-                do_blank(&display, &mut timer, &requested_display_status, &mut status);
+                requested_display_status.turn_night_timer_on();
+                do_blank(
+                    &display,
+                    &mut timer,
+                    &requested_display_status,
+                    &mut status,
+                    true,
+                );
             }
             Message::ButtonPress(ButtonId::PageUp) => {
                 info!("got page up");
                 display.send(DisplayCommand::PageUp).unwrap();
-                requested_display_status.reset_timer();
-                do_blank(&display, &mut timer, &requested_display_status, &mut status);
+                requested_display_status.turn_night_timer_on();
+                do_blank(
+                    &display,
+                    &mut timer,
+                    &requested_display_status,
+                    &mut status,
+                    true,
+                );
             }
             Message::ButtonPress(ButtonId::PageDown) => {
                 info!("got page down");
                 display.send(DisplayCommand::PageDown).unwrap();
-                requested_display_status.reset_timer();
-                do_blank(&display, &mut timer, &requested_display_status, &mut status);
+                requested_display_status.turn_night_timer_on();
+                do_blank(
+                    &display,
+                    &mut timer,
+                    &requested_display_status,
+                    &mut status,
+                    true,
+                );
             }
             Message::ButtonRelease(ButtonId::Physical(id)) => {
                 info!("Got button release");
                 let id = id + page * boards::NUM_DISPLAYS;
                 display.send(DisplayCommand::ButtonReleased(id)).unwrap();
-                requested_display_status.reset_timer();
-                do_blank(&display, &mut timer, &requested_display_status, &mut status);
+                requested_display_status.turn_night_timer_on();
+                do_blank(
+                    &display,
+                    &mut timer,
+                    &requested_display_status,
+                    &mut status,
+                    true,
+                );
             }
             Message::ButtonRelease(ButtonId::Controller(id)) => {
                 info!("Got button release");
                 display.send(DisplayCommand::ButtonReleased(id)).unwrap();
-                requested_display_status.reset_timer();
-                do_blank(&display, &mut timer, &requested_display_status, &mut status);
+                requested_display_status.turn_night_timer_on();
+                do_blank(
+                    &display,
+                    &mut timer,
+                    &requested_display_status,
+                    &mut status,
+                    true,
+                );
             }
             Message::ButtonRelease(_) => {
                 info!("Got button release");
-                requested_display_status.reset_timer();
-                do_blank(&display, &mut timer, &requested_display_status, &mut status);
+                requested_display_status.turn_night_timer_on();
+                do_blank(
+                    &display,
+                    &mut timer,
+                    &requested_display_status,
+                    &mut status,
+                    true,
+                );
             }
             Message::BlankDisplays => {
                 info!("Got blank display timer");
-                requested_display_status.got_timer();
-                do_blank(&display, &mut timer, &requested_display_status, &mut status);
+                requested_display_status.turn_night_timer_off();
+                do_blank(
+                    &display,
+                    &mut timer,
+                    &requested_display_status,
+                    &mut status,
+                    true,
+                );
             }
             Message::PageIsDisplayed(number) => {
                 page = number;
