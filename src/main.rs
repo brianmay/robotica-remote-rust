@@ -219,6 +219,7 @@ fn main() -> Result<()> {
     for received in rx {
         match received {
             Message::MqttReceived(_, power, mqtt::Label::NightStatus) => {
+                info!("Got night: {}", power);
                 match power.as_str() {
                     "ON" => requested_display_status.time_of_day = TimeOfDay::Night,
                     "OFF" => requested_display_status.time_of_day = TimeOfDay::Day,
