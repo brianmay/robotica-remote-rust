@@ -39,7 +39,7 @@ pub fn configure_devices(
     // let touch_pin4 = touch_builder.add_pin(pins.gpio14, 400).unwrap();
 
     button::touch::configure_touch_button(touch_pin1, tx.clone(), button::ButtonId::PageUp)?;
-    button::touch::configure_touch_button(touch_pin2, tx.clone(), button::ButtonId::PageDown)?;
+    button::touch::configure_touch_button(touch_pin2, tx, button::ButtonId::PageDown)?;
     // button::touch::configure_touch_button(touch_pin3, tx.clone(), button::ButtonId::Controller(0))?;
     // button::touch::configure_touch_button(touch_pin4, tx, button::ButtonId::Controller(1))?;
 
