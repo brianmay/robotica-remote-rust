@@ -208,7 +208,7 @@ pub fn configure_button<T: 'static + InputPinNotify<Error = impl Debug + Display
     tx: messages::Sender,
     id: ButtonId,
 ) -> Result<()> {
-    let debounced_encoder_pin = Debouncer::new(pin, 30);
+    let debounced_encoder_pin = Debouncer::new(pin, 200);
     button(debounced_encoder_pin, Active::Low, id, tx);
     Ok(())
 }
