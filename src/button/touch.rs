@@ -86,7 +86,7 @@ impl TouchDebouncer {
                             }
                             raw_value = Some(Value::Low);
                         } else {
-                            println!("got event for high value");
+                            // println!("got event for high value");
                         }
                     }
                     TouchDebouncerMessage::Subscribe(new_subscriber) => {
