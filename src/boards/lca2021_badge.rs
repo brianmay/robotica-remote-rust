@@ -15,7 +15,7 @@ use crate::wifi;
 
 use super::Board;
 
-pub const NUM_DISPLAYS: usize = display::lca2021_badge::NUM_DISPLAYS;
+const NUM_DISPLAYS: usize = display::lca2021_badge::NUM_DISPLAYS;
 
 #[allow(dead_code)]
 pub struct Lca2022Badge {
@@ -27,6 +27,10 @@ pub struct Lca2022Badge {
 impl Board for Lca2022Badge {
     fn get_display(&self) -> mpsc::Sender<display::DisplayCommand> {
         self.display.clone()
+    }
+
+    fn physical_button_to_controller(&self, id: usize, page: usize) -> usize {
+        id + page * NUM_DISPLAYS
     }
 }
 

@@ -17,10 +17,9 @@ mod robotica;
 #[cfg(feature = "robotica")]
 use robotica as board;
 
-pub const NUM_DISPLAYS: usize = board::NUM_DISPLAYS;
-
 pub trait Board {
     fn get_display(&self) -> mpsc::Sender<display::DisplayCommand>;
+    fn physical_button_to_controller(&self, id: usize, page: usize) -> usize;
 }
 
 pub fn configure_devices(tx: mpsc::Sender<messages::Message>) -> Result<impl Board> {

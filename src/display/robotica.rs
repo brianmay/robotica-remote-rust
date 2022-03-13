@@ -11,8 +11,6 @@ use crate::messages::Sender;
 
 use super::DisplayCommand;
 
-pub const NUM_DISPLAYS: usize = 2;
-
 fn display_thread(
     mut leds: Ws2812Esp32Rmt,
     tx_main: mpsc::Sender<Message>,

@@ -14,8 +14,6 @@ use crate::wifi;
 
 use super::Board;
 
-pub const NUM_DISPLAYS: usize = display::robotica::NUM_DISPLAYS;
-
 #[allow(dead_code)]
 pub struct RoboticaBoard {
     wifi: EspWifi,
@@ -26,6 +24,10 @@ pub struct RoboticaBoard {
 impl Board for RoboticaBoard {
     fn get_display(&self) -> mpsc::Sender<display::DisplayCommand> {
         self.display.clone()
+    }
+
+    fn physical_button_to_controller(&self, id: usize, _page: usize) -> usize {
+        id
     }
 }
 

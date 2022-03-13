@@ -278,7 +278,7 @@ fn main() -> Result<()> {
             }
             Message::ButtonPress(ButtonId::Physical(id)) => {
                 if status.display_on {
-                    let id = id + page * boards::NUM_DISPLAYS;
+                    let id = board.physical_button_to_controller(id, page);
                     button_press(&mut controllers, id, &mqtt);
                     display.send(DisplayCommand::ButtonPressed(id)).unwrap();
                 }
@@ -329,7 +329,7 @@ fn main() -> Result<()> {
             }
             Message::ButtonRelease(ButtonId::Physical(id)) => {
                 info!("Got button release");
-                let id = id + page * boards::NUM_DISPLAYS;
+                let id = board.physical_button_to_controller(id, page);
                 display.send(DisplayCommand::ButtonReleased(id)).unwrap();
                 requested_display_status.turn_night_timer_on();
                 do_blank(
