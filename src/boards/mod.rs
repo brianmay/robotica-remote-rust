@@ -4,7 +4,6 @@ use anyhow::Result;
 
 use crate::display;
 use crate::messages;
-use crate::wifi;
 
 #[cfg(feature = "lca2021_badge")]
 mod lca2021_badge;
@@ -19,14 +18,11 @@ mod robotica;
 use robotica as board;
 
 pub const NUM_DISPLAYS: usize = board::NUM_DISPLAYS;
-// pub const NUM_PAGES: usize = board::NUM_PAGES;
 
-pub fn configure_devices(
-    tx: mpsc::Sender<messages::Message>,
-) -> Result<(Box<dyn wifi::Wifi>, mpsc::Sender<display::DisplayCommand>)> {
-    board::configure_devices(tx)
+pub trait Board {
+    fn get_display(&self) -> mpsc::Sender<display::DisplayCommand>;
 }
 
-pub fn initialize() {
-    board::initialize()
+pub fn configure_devices(tx: mpsc::Sender<messages::Message>) -> Result<impl Board> {
+    board::configure_devices(tx)
 }

@@ -4,27 +4,40 @@ use anyhow::Result;
 
 use esp_idf_hal::prelude::Peripherals;
 
-use log::*;
+use esp_idf_svc::sntp::EspSntp;
+use esp_idf_svc::wifi::EspWifi;
 
 use crate::button;
 use crate::display;
-use crate::display::DisplayCommand;
 use crate::input::esp32::TouchControllerBuilder;
 use crate::messages;
 use crate::wifi;
 
+use super::Board;
+
 pub const NUM_DISPLAYS: usize = display::lca2021_badge::NUM_DISPLAYS;
 
-pub fn configure_devices(
-    tx: mpsc::Sender<messages::Message>,
-) -> Result<(Box<dyn wifi::Wifi>, mpsc::Sender<DisplayCommand>)> {
+#[allow(dead_code)]
+pub struct Lca2022Badge {
+    wifi: EspWifi,
+    sntp: EspSntp,
+    display: mpsc::Sender<display::DisplayCommand>,
+}
+
+impl Board for Lca2022Badge {
+    fn get_display(&self) -> mpsc::Sender<display::DisplayCommand> {
+        self.display.clone()
+    }
+}
+
+pub fn configure_devices(tx: mpsc::Sender<messages::Message>) -> Result<Lca2022Badge> {
     let peripherals = Peripherals::take().unwrap();
     let pins = peripherals.pins;
 
     let display =
         display::lca2021_badge::connect(peripherals.i2c0, pins.gpio4, pins.gpio5, tx.clone())?;
 
-    let wifi = wifi::esp::connect()?;
+    let (wifi, sntp) = wifi::esp::connect()?;
 
     let pin = pins.gpio16.into_input().unwrap();
     button::configure_button(pin, tx.clone(), button::ButtonId::Physical(0))?;
@@ -43,16 +56,9 @@ pub fn configure_devices(
     // button::touch::configure_touch_button(touch_pin3, tx.clone(), button::ButtonId::Controller(0))?;
     // button::touch::configure_touch_button(touch_pin4, tx, button::ButtonId::Controller(1))?;
 
-    Ok((Box::new(wifi), display))
-}
-
-pub fn initialize() {
-    esp_idf_sys::link_patches();
-
-    use pretty_env_logger::env_logger::WriteStyle;
-
-    pretty_env_logger::formatted_timed_builder()
-        .filter(None, LevelFilter::Trace)
-        .write_style(WriteStyle::Always)
-        .init();
+    Ok(Lca2022Badge {
+        wifi,
+        sntp,
+        display,
+    })
 }

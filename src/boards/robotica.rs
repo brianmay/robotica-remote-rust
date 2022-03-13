@@ -4,18 +4,32 @@ use anyhow::Result;
 
 use esp_idf_hal::prelude::Peripherals;
 
-use log::*;
+use esp_idf_svc::sntp::EspSntp;
+use esp_idf_svc::wifi::EspWifi;
 
 use crate::button;
 use crate::display;
 use crate::messages;
 use crate::wifi;
 
+use super::Board;
+
 pub const NUM_DISPLAYS: usize = display::robotica::NUM_DISPLAYS;
 
-pub fn configure_devices(
-    tx: mpsc::Sender<messages::Message>,
-) -> Result<(Box<dyn wifi::Wifi>, mpsc::Sender<display::DisplayCommand>)> {
+#[allow(dead_code)]
+pub struct RoboticaBoard {
+    wifi: EspWifi,
+    sntp: EspSntp,
+    display: mpsc::Sender<display::DisplayCommand>,
+}
+
+impl Board for RoboticaBoard {
+    fn get_display(&self) -> mpsc::Sender<display::DisplayCommand> {
+        self.display.clone()
+    }
+}
+
+pub fn configure_devices(tx: mpsc::Sender<messages::Message>) -> Result<RoboticaBoard> {
     let peripherals = Peripherals::take().unwrap();
     let pins = peripherals.pins;
 
@@ -33,18 +47,11 @@ pub fn configure_devices(
 
     let display = display::robotica::connect(13, tx)?;
 
-    let wifi = wifi::esp::connect()?;
+    let (wifi, sntp) = wifi::esp::connect()?;
 
-    Ok((Box::new(wifi), display))
-}
-
-pub fn initialize() {
-    esp_idf_sys::link_patches();
-
-    use pretty_env_logger::env_logger::WriteStyle;
-
-    pretty_env_logger::formatted_timed_builder()
-        .filter(None, LevelFilter::Trace)
-        .write_style(WriteStyle::Always)
-        .init();
+    Ok(RoboticaBoard {
+        wifi,
+        sntp,
+        display,
+    })
 }

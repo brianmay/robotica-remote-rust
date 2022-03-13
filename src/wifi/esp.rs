@@ -16,15 +16,7 @@ use log::*;
 const SSID: &str = env!("WIFI_SSID");
 const PASS: &str = env!("WIFI_PASS");
 
-#[allow(dead_code)]
-pub struct MyWifi {
-    wifi: Box<EspWifi>,
-    sntp: EspSntp,
-}
-
-impl crate::wifi::Wifi for MyWifi {}
-
-pub fn connect() -> Result<MyWifi> {
+pub fn connect() -> Result<(EspWifi, EspSntp)> {
     let netif_stack = Arc::new(EspNetifStack::new()?);
     let sys_loop_stack = Arc::new(EspSysLoopStack::new()?);
     let default_nvs = Arc::new(EspDefaultNvs::new()?);
@@ -32,15 +24,15 @@ pub fn connect() -> Result<MyWifi> {
     let wifi = wifi(netif_stack, sys_loop_stack, default_nvs)?;
     let sntp = EspSntp::new_default()?;
 
-    Ok(MyWifi { wifi, sntp })
+    Ok((wifi, sntp))
 }
 
 fn wifi(
     netif_stack: Arc<EspNetifStack>,
     sys_loop_stack: Arc<EspSysLoopStack>,
     default_nvs: Arc<EspDefaultNvs>,
-) -> Result<Box<EspWifi>> {
-    let mut wifi = Box::new(EspWifi::new(netif_stack, sys_loop_stack, default_nvs)?);
+) -> Result<EspWifi> {
+    let mut wifi = EspWifi::new(netif_stack, sys_loop_stack, default_nvs)?;
 
     info!("Wifi created, about to scan");
 

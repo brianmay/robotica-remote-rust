@@ -5,6 +5,7 @@ use std::env;
 use std::sync::mpsc;
 
 use anyhow::Result;
+use boards::Board;
 use embedded_svc::timer::OnceTimer;
 use embedded_svc::timer::Timer;
 use embedded_svc::timer::TimerService;
@@ -14,6 +15,7 @@ use log::*;
 
 mod button;
 use button::ButtonId;
+use pretty_env_logger::env_logger::WriteStyle;
 
 mod button_controllers;
 
@@ -164,11 +166,15 @@ fn button_press(
 }
 
 fn main() -> Result<()> {
-    boards::initialize();
+    pretty_env_logger::formatted_timed_builder()
+        .filter(None, LevelFilter::Trace)
+        .write_style(WriteStyle::Always)
+        .init();
 
     let (tx, rx) = mpsc::channel();
 
-    let (_wifi, display) = boards::configure_devices(tx.clone())?;
+    let board = boards::configure_devices(tx.clone())?;
+    let display = board.get_display();
 
     let config_list = config::get_controllers_config();
 
