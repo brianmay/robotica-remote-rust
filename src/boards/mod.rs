@@ -17,6 +17,12 @@ mod robotica;
 #[cfg(feature = "robotica")]
 use robotica as board;
 
+#[cfg(feature = "makerfab")]
+mod makerfab;
+
+#[cfg(feature = "makerfab")]
+use makerfab as board;
+
 pub const NUM_CONTROLLERS_PER_PAGE: usize = board::NUM_CONTROLLERS_PER_PAGE;
 
 pub trait Board {

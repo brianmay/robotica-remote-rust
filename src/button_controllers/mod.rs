@@ -40,7 +40,7 @@ pub struct Subscription {
 }
 
 #[allow(dead_code)]
-#[derive(std::cmp::PartialEq, Clone)]
+#[derive(std::cmp::PartialEq, Clone, Debug)]
 pub enum DisplayState {
     HardOff,
     Error,
@@ -54,7 +54,7 @@ pub trait Config {
     fn create_controller(&self) -> Box<dyn Controller>;
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Icon {
     Light,
     Fan,

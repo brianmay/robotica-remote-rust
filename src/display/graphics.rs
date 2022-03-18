@@ -46,6 +46,7 @@ pub fn display_thread<D, const NUM_PER_PAGE: usize, const NUM_DISPLAYS: usize>(
     let mut selected_page_number: usize = 0;
 
     for display in displays.iter_mut() {
+        display.set_display_on(true).unwrap();
         led_draw_loading(display);
         display.flush().unwrap();
     }
@@ -186,7 +187,8 @@ where
     D::Color: From<Rgb555>,
     D::Error: std::fmt::Debug,
 {
-    Rectangle::new(display.bounding_box().top_left, display.bounding_box().size)
+    display
+        .bounding_box()
         .into_styled(
             PrimitiveStyleBuilder::new()
                 .fill_color(Rgb555::BLUE.into())
