@@ -369,7 +369,7 @@ where
 
         Text::with_alignment(
             text,
-            Point::new(center.x, bounding_box.top_left.y + y + 17),
+            Point::new(center.x, y + 17),
             MonoTextStyle::new(&FONT_10X20, Rgb555::WHITE.into()),
             Alignment::Center,
         )
