@@ -9,7 +9,6 @@ pub enum Message {
     ButtonPress(button::ButtonId),
     ButtonRelease(button::ButtonId),
     BlankDisplays,
-    PageIsDisplayed(usize),
 }
 
 pub type Sender = std::sync::mpsc::Sender<messages::Message>;

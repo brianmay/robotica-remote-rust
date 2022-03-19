@@ -15,7 +15,7 @@ use crate::wifi;
 
 use super::Board;
 
-const NUM_DISPLAYS: usize = display::lca2021_badge::NUM_DISPLAYS;
+pub const NUM_CONTROLLERS_PER_PAGE: usize = display::lca2021_badge::NUM_PER_PAGE;
 
 #[allow(dead_code)]
 pub struct Lca2022Badge {
@@ -28,18 +28,13 @@ impl Board for Lca2022Badge {
     fn get_display(&self) -> mpsc::Sender<display::DisplayCommand> {
         self.display.clone()
     }
-
-    fn physical_button_to_controller(&self, id: usize, page: usize) -> usize {
-        id + page * NUM_DISPLAYS
-    }
 }
 
 pub fn configure_devices(tx: mpsc::Sender<messages::Message>) -> Result<Lca2022Badge> {
     let peripherals = Peripherals::take().unwrap();
     let pins = peripherals.pins;
 
-    let display =
-        display::lca2021_badge::connect(peripherals.i2c0, pins.gpio4, pins.gpio5, tx.clone())?;
+    let display = display::lca2021_badge::connect(peripherals.i2c0, pins.gpio4, pins.gpio5)?;
 
     let (wifi, sntp) = wifi::esp::connect()?;
 

@@ -1,3 +1,4 @@
+use std::cmp::max;
 use std::sync::mpsc;
 
 use log::*;
@@ -15,10 +16,7 @@ use embedded_graphics::{
 };
 use tinytga::DynamicTga;
 
-use crate::{
-    button_controllers::{self, DisplayState, Icon},
-    messages::Message,
-};
+use crate::button_controllers::{self, DisplayState, Icon};
 
 use super::DisplayCommand;
 
@@ -28,40 +26,36 @@ pub trait FlushableDrawTarget: DrawTarget {
 }
 
 #[derive(Clone)]
-struct State {
+pub struct State {
     state: DisplayState,
     icon: Icon,
     name: String,
     pressed: bool,
 }
 
-pub fn display_thread<D, const NUM_PAGES: usize, const NUM_DISPLAYS: usize>(
-    tx_main: mpsc::Sender<Message>,
+pub fn display_thread<D, const NUM_PER_PAGE: usize, const NUM_DISPLAYS: usize>(
     displays: &mut [D; NUM_DISPLAYS],
+    components: &[Button; NUM_PER_PAGE],
     rx: mpsc::Receiver<DisplayCommand>,
 ) where
     D: FlushableDrawTarget,
     D::Color: PixelColor + From<Gray8> + From<Rgb555> + From<Rgb888>,
     D::Error: std::fmt::Debug,
 {
-    let mut states: Vec<Vec<Option<State>>> = vec![vec![None; NUM_PAGES]; NUM_DISPLAYS];
+    let mut states: Vec<Option<State>> = vec![None; NUM_PER_PAGE];
     let mut selected_page_number: usize = 0;
-    tx_main
-        .send(Message::PageIsDisplayed(selected_page_number))
-        .unwrap();
+
     for display in displays.iter_mut() {
         led_draw_loading(display);
         display.flush().unwrap();
     }
+
     for received in rx {
-        let mut update_displays: [bool; NUM_DISPLAYS] = [false; NUM_DISPLAYS];
+        let mut update_components: [bool; NUM_PER_PAGE] = [false; NUM_PER_PAGE];
 
         match received {
             DisplayCommand::DisplayState(state, icon, id, name) => {
-                let display_number: usize = id % NUM_DISPLAYS;
-                let page_number: usize = id / NUM_DISPLAYS;
-
-                let pressed = if let Some(old) = &states[display_number][page_number] {
+                let pressed = if let Some(old) = &states[id] {
                     old.pressed
                 } else {
                     false
@@ -73,69 +67,51 @@ pub fn display_thread<D, const NUM_PAGES: usize, const NUM_DISPLAYS: usize>(
                     name,
                     pressed,
                 };
-                states[display_number][page_number] = Some(page);
-
-                if selected_page_number == page_number {
-                    update_displays[display_number] = true;
-                }
+                states[id] = Some(page);
+                update_components[id] = true;
+            }
+            DisplayCommand::DisplayNone(id) => {
+                states[id] = None;
+                update_components[id] = true;
             }
             DisplayCommand::BlankAll => {
                 for display in displays.iter_mut() {
                     display.set_display_on(false).unwrap();
                 }
-                update_displays = [true; NUM_DISPLAYS];
             }
             DisplayCommand::UnBlankAll => {
                 for display in displays.iter_mut() {
                     display.set_display_on(true).unwrap();
                 }
-                update_displays = [true; NUM_DISPLAYS];
+                // update_components = [true; NUM_PER_PAGE];
             }
-            DisplayCommand::PageUp => {
-                if selected_page_number + 1 < NUM_PAGES {
-                    selected_page_number += 1
-                };
-                update_displays = [true; NUM_DISPLAYS];
-                tx_main
-                    .send(Message::PageIsDisplayed(selected_page_number))
-                    .unwrap();
-            }
-            DisplayCommand::PageDown => {
-                if selected_page_number > 0 {
-                    selected_page_number -= 1
-                };
-                update_displays = [true; NUM_DISPLAYS];
-                tx_main
-                    .send(Message::PageIsDisplayed(selected_page_number))
-                    .unwrap();
+            DisplayCommand::ShowPage(page_num) => {
+                selected_page_number = page_num;
+                update_components = [true; NUM_PER_PAGE];
             }
             DisplayCommand::ButtonPressed(id) => {
-                let display_number: usize = id % NUM_DISPLAYS;
-                let page_number: usize = id / NUM_DISPLAYS;
-                if let Some(page) = &mut states[display_number][page_number] {
+                if let Some(page) = &mut states[id] {
                     page.pressed = true;
                 }
-                if selected_page_number == page_number {
-                    update_displays[display_number] = true;
-                }
+                update_components = [true; NUM_PER_PAGE];
             }
             DisplayCommand::ButtonReleased(id) => {
-                let display_number: usize = id % NUM_DISPLAYS;
-                let page_number: usize = id / NUM_DISPLAYS;
-                if let Some(page) = &mut states[display_number][page_number] {
+                if let Some(page) = &mut states[id] {
                     page.pressed = false;
                 }
-                if selected_page_number == page_number {
-                    update_displays[display_number] = true;
-                }
+                update_components = [true; NUM_PER_PAGE];
             }
         }
 
-        for (i, display) in displays.iter_mut().enumerate() {
-            if update_displays[i] {
-                info!("Drawing display {}", i);
-                let number = selected_page_number * NUM_DISPLAYS + i;
-                page_draw(display, &states[i][selected_page_number], number);
+        for (id, component) in components.iter().enumerate() {
+            let state = &states[id];
+            if update_components[id] {
+                component.draw(displays, state, selected_page_number);
+            }
+        }
+
+        if update_components.iter().any(|x| *x) {
+            for display in displays.iter_mut() {
                 display.flush().unwrap();
             }
         }
@@ -143,36 +119,65 @@ pub fn display_thread<D, const NUM_PAGES: usize, const NUM_DISPLAYS: usize>(
         info!("Done flushing");
     }
 }
+pub struct Button {
+    display: usize,
+    bounding_box: Rectangle,
+}
 
-fn page_draw<D>(display: &mut D, state_or_none: &Option<State>, number: usize)
-where
+impl Button {
+    pub fn new(display: usize, bounding_box: Rectangle) -> Button {
+        Button {
+            display,
+            bounding_box,
+        }
+    }
+
+    fn draw<D>(&self, displays: &mut [D], state: &Option<State>, page_num: usize)
+    where
+        D: FlushableDrawTarget,
+        D::Color: PixelColor + From<Gray8> + From<Rgb555> + From<Rgb888>,
+        D::Error: std::fmt::Debug,
+    {
+        let display = &mut displays[self.display];
+        page_draw(display, state, page_num, &self.bounding_box);
+    }
+}
+
+fn page_draw<D>(
+    display: &mut D,
+    state_or_none: &Option<State>,
+    number: usize,
+    bounding_box: &Rectangle,
+) where
     D: DrawTarget,
     D::Color: PixelColor + From<Gray8> + From<Rgb555> + From<Rgb888>,
     D::Error: std::fmt::Debug,
 {
-    led_clear(display);
+    led_clear(display, bounding_box);
 
     if let Some(state) = state_or_none {
         let image_category = get_image_category(&state.state);
         let image_data = get_image_data(&image_category, &state.icon);
-        led_draw_image(display, image_data);
-        led_draw_overlay(display, &state.state);
-        led_draw_name(display, &state.name);
+        led_draw_image(display, image_data, bounding_box);
+        led_draw_overlay(display, &state.state, bounding_box);
+        led_draw_name(display, &state.name, bounding_box);
         if state.pressed {
-            led_draw_pressed(display);
+            led_draw_pressed(display, bounding_box);
         }
     }
 
-    led_draw_number(display, number);
+    led_draw_number(display, number, bounding_box);
 }
 
-fn led_clear<D>(display: &mut D)
+fn led_clear<D>(display: &mut D, bounding_box: &Rectangle)
 where
     D: DrawTarget,
     D::Color: From<Rgb555>,
     D::Error: std::fmt::Debug,
 {
-    display.clear(Rgb555::BLACK.into()).unwrap();
+    display
+        .fill_solid(bounding_box, Rgb555::BLACK.into())
+        .unwrap();
 }
 
 fn led_draw_loading<D>(display: &mut D)
@@ -203,13 +208,13 @@ where
     .unwrap();
 }
 
-fn led_draw_pressed<D>(display: &mut D)
+fn led_draw_pressed<D>(display: &mut D, bounding_box: &Rectangle)
 where
     D: DrawTarget,
     D::Color: From<Rgb555>,
     D::Error: std::fmt::Debug,
 {
-    Rectangle::new(display.bounding_box().top_left, display.bounding_box().size)
+    bounding_box
         .into_styled(
             PrimitiveStyleBuilder::new()
                 .reset_fill_color()
@@ -221,7 +226,7 @@ where
         .unwrap();
 }
 
-fn led_draw_number<D>(display: &mut D, number: usize)
+fn led_draw_number<D>(display: &mut D, number: usize, bounding_box: &Rectangle)
 where
     D: DrawTarget,
     D::Color: From<Rgb555>,
@@ -231,14 +236,14 @@ where
 
     Text::new(
         &t,
-        Point::new(0, 14),
+        Point::new(bounding_box.top_left.x + 2, bounding_box.top_left.y + 14),
         MonoTextStyle::new(&FONT_10X20, Rgb555::WHITE.into()),
     )
     .draw(display)
     .unwrap();
 }
 
-fn led_draw_name<D>(display: &mut D, name: &str)
+fn led_draw_name<D>(display: &mut D, name: &str, bounding_box: &Rectangle)
 where
     D: DrawTarget,
     D::Color: From<Rgb555>,
@@ -246,7 +251,10 @@ where
 {
     Text::new(
         name,
-        Point::new(2, (display.bounding_box().size.height - 4) as i32),
+        Point::new(
+            bounding_box.top_left.x + 2,
+            (bounding_box.size.height - 4) as i32,
+        ),
         MonoTextStyle::new(&FONT_5X8, Rgb555::WHITE.into()),
     )
     .draw(display)
@@ -307,30 +315,30 @@ fn get_image_data<T: PixelColor + From<Gray8> + From<Rgb555> + From<Rgb888>>(
     DynamicTga::from_slice(data).unwrap()
 }
 
-fn led_draw_image<D, I, C>(display: &mut D, tga: I)
+fn led_draw_image<D, I, C>(display: &mut D, tga: I, bounding_box: &Rectangle)
 where
     D: DrawTarget<Color = C>,
     D::Error: std::fmt::Debug,
     I: ImageDrawable<Color = C>,
 {
     let size = tga.size();
-    let display_size = display.bounding_box();
-    let center = display_size.center();
+    let center = bounding_box.center();
 
-    let x = display_size.bottom_right().unwrap().x - size.width as i32;
-    let y = center.y - size.height as i32 / 2;
+    let x = max(
+        bounding_box.bottom_right().unwrap().x - size.width as i32,
+        0,
+    );
+    let y = max(center.y - size.height as i32 / 2, 0);
 
     Image::new(&tga, Point::new(x, y)).draw(display).unwrap();
 }
 
-fn led_draw_overlay<D>(display: &mut D, state: &DisplayState)
+fn led_draw_overlay<D>(display: &mut D, state: &DisplayState, bounding_box: &Rectangle)
 where
     D: DrawTarget,
     D::Color: From<Rgb555>,
     D::Error: std::fmt::Debug,
 {
-    let display_size = display.bounding_box();
-
     let text = match state {
         DisplayState::HardOff => "Hard off",
         DisplayState::Error => "Error",
@@ -341,11 +349,11 @@ where
     };
 
     if matches!(state, DisplayState::Error | DisplayState::Unknown) {
-        let center = display_size.center();
+        let center = bounding_box.center();
         let size = Size::new(60, 24);
 
         let x = center.x - size.width as i32 / 2;
-        let y = display_size.bottom_right().unwrap().y - 30;
+        let y = bounding_box.bottom_right().unwrap().y - 30;
         let ul = Point::new(x, y);
 
         Rectangle::new(ul, size)
@@ -361,7 +369,7 @@ where
 
         Text::with_alignment(
             text,
-            Point::new(center.x, y + 17),
+            Point::new(center.x, bounding_box.top_left.y + y + 17),
             MonoTextStyle::new(&FONT_10X20, Rgb555::WHITE.into()),
             Alignment::Center,
         )

@@ -2,10 +2,12 @@
 #![feature(backtrace)]
 
 use std::env;
+use std::ops::Range;
 use std::sync::mpsc;
 
 use anyhow::Result;
 use boards::Board;
+use boards::NUM_CONTROLLERS_PER_PAGE;
 use embedded_svc::timer::OnceTimer;
 use embedded_svc::timer::Timer;
 use embedded_svc::timer::TimerService;
@@ -76,23 +78,30 @@ impl RequestedDisplayStatus {
 
 fn update_display(
     display: &mpsc::Sender<DisplayCommand>,
-    id: usize,
+    id_in_page: usize,
     controller: &dyn button_controllers::Controller,
     state: button_controllers::DisplayState,
 ) {
     let icon = controller.get_icon();
     let name = controller.get_name();
-    let message = DisplayCommand::DisplayState(state, icon, id, name);
+    let message = DisplayCommand::DisplayState(state, icon, id_in_page, name);
     display.send(message).unwrap();
 }
 
 fn update_displays(
     display: &mpsc::Sender<DisplayCommand>,
     controllers: &[Box<dyn button_controllers::Controller>],
+    page_num: usize,
 ) {
-    for (id, controller) in controllers.iter().enumerate() {
-        let state = controller.get_display_state();
-        update_display(display, id, controller.as_ref(), state);
+    let controllers = get_controllers_per_page(controllers, page_num);
+    for (id_in_page, controller) in controllers.iter().enumerate() {
+        if let Some(controller) = controller {
+            let state = controller.get_display_state();
+            update_display(display, id_in_page, *controller, state);
+        } else {
+            let message = DisplayCommand::DisplayNone(id_in_page);
+            display.send(message).unwrap();
+        };
     }
 }
 
@@ -165,6 +174,47 @@ fn button_press(
     }
 }
 
+fn get_controller_range_for_page(page: usize) -> Range<usize> {
+    let start = page * NUM_CONTROLLERS_PER_PAGE;
+    let end = start + NUM_CONTROLLERS_PER_PAGE;
+    Range { start, end }
+}
+
+fn get_controllers_per_page(
+    controllers: &[Box<dyn button_controllers::Controller>],
+    page: usize,
+) -> Vec<Option<&dyn button_controllers::Controller>> {
+    let mut range = get_controller_range_for_page(page);
+    let len = controllers.len();
+
+    if range.end > len {
+        range.end = len
+    }
+    let controllers = &controllers[range];
+    let len = controllers.len();
+
+    let mut output: Vec<_> = controllers.iter().map(|x| Some(x.as_ref())).collect();
+    output.extend((len..NUM_CONTROLLERS_PER_PAGE).map(|_| None));
+
+    output
+}
+
+fn controller_to_page_id(controller_id: usize) -> (usize, usize) {
+    let page_num = controller_id / NUM_CONTROLLERS_PER_PAGE;
+    let id_in_page = controller_id % NUM_CONTROLLERS_PER_PAGE;
+    (page_num, id_in_page)
+}
+
+fn page_to_controller_id(page_num: usize, id_in_page: usize) -> usize {
+    page_num * NUM_CONTROLLERS_PER_PAGE + id_in_page
+}
+
+fn get_num_pages(controllers: &[Box<dyn button_controllers::Controller>]) -> usize {
+    let len = controllers.len();
+    let num = NUM_CONTROLLERS_PER_PAGE;
+    len / num + usize::from(len % num != 0)
+}
+
 fn main() -> Result<()> {
     pretty_env_logger::formatted_timed_builder()
         .filter(None, LevelFilter::Trace)
@@ -218,9 +268,12 @@ fn main() -> Result<()> {
         &mut status,
         false,
     );
-    update_displays(&display, &controllers);
 
-    let mut page = 0;
+    let mut page_num = 0;
+    let last_page = get_num_pages(&controllers) - 1;
+
+    update_displays(&display, &controllers, page_num);
+    display.send(DisplayCommand::ShowPage(page_num)).unwrap();
 
     for received in rx {
         match received {
@@ -262,8 +315,10 @@ fn main() -> Result<()> {
                         false,
                     );
                 }
-                if old_state != state {
-                    update_display(&display, id, controller.as_ref(), state);
+
+                let (msg_page_num, id_in_page) = controller_to_page_id(id);
+                if page_num == msg_page_num && old_state != state {
+                    update_display(&display, id_in_page, controller.as_ref(), state);
                 }
             }
             Message::MqttConnect => {
@@ -274,13 +329,15 @@ fn main() -> Result<()> {
                 for controller in controllers.iter_mut() {
                     controller.process_disconnected();
                 }
-                update_displays(&display, &controllers);
+                update_displays(&display, &controllers, page_num);
             }
-            Message::ButtonPress(ButtonId::Physical(id)) => {
+            Message::ButtonPress(ButtonId::Physical(id_in_page)) => {
                 if status.display_on {
-                    let id = board.physical_button_to_controller(id, page);
+                    let id = page_to_controller_id(page_num, id_in_page);
                     button_press(&mut controllers, id, &mqtt);
-                    display.send(DisplayCommand::ButtonPressed(id)).unwrap();
+                    display
+                        .send(DisplayCommand::ButtonPressed(id_in_page))
+                        .unwrap();
                 }
                 requested_display_status.turn_night_timer_on();
                 do_blank(
@@ -293,7 +350,12 @@ fn main() -> Result<()> {
             }
             Message::ButtonPress(ButtonId::Controller(id)) => {
                 button_press(&mut controllers, id, &mqtt);
-                display.send(DisplayCommand::ButtonPressed(id)).unwrap();
+                let (msg_page_num, id_in_page) = controller_to_page_id(id);
+                if msg_page_num == page_num {
+                    display
+                        .send(DisplayCommand::ButtonPressed(id_in_page))
+                        .unwrap();
+                }
                 requested_display_status.turn_night_timer_on();
                 do_blank(
                     &display,
@@ -305,7 +367,12 @@ fn main() -> Result<()> {
             }
             Message::ButtonPress(ButtonId::PageUp) => {
                 info!("got page up");
-                display.send(DisplayCommand::PageUp).unwrap();
+                page_num = page_num.saturating_add(1);
+                if page_num > last_page {
+                    page_num = last_page
+                };
+                display.send(DisplayCommand::ShowPage(page_num)).unwrap();
+                update_displays(&display, &controllers, page_num);
                 requested_display_status.turn_night_timer_on();
                 do_blank(
                     &display,
@@ -317,7 +384,9 @@ fn main() -> Result<()> {
             }
             Message::ButtonPress(ButtonId::PageDown) => {
                 info!("got page down");
-                display.send(DisplayCommand::PageDown).unwrap();
+                page_num = page_num.saturating_sub(1);
+                display.send(DisplayCommand::ShowPage(page_num)).unwrap();
+                update_displays(&display, &controllers, page_num);
                 requested_display_status.turn_night_timer_on();
                 do_blank(
                     &display,
@@ -327,10 +396,11 @@ fn main() -> Result<()> {
                     true,
                 );
             }
-            Message::ButtonRelease(ButtonId::Physical(id)) => {
+            Message::ButtonRelease(ButtonId::Physical(id_in_page)) => {
                 info!("Got button release");
-                let id = board.physical_button_to_controller(id, page);
-                display.send(DisplayCommand::ButtonReleased(id)).unwrap();
+                display
+                    .send(DisplayCommand::ButtonReleased(id_in_page))
+                    .unwrap();
                 requested_display_status.turn_night_timer_on();
                 do_blank(
                     &display,
@@ -342,7 +412,12 @@ fn main() -> Result<()> {
             }
             Message::ButtonRelease(ButtonId::Controller(id)) => {
                 info!("Got button release");
-                display.send(DisplayCommand::ButtonReleased(id)).unwrap();
+                let (msg_page_num, id_in_page) = controller_to_page_id(id);
+                if msg_page_num == page_num {
+                    display
+                        .send(DisplayCommand::ButtonReleased(id_in_page))
+                        .unwrap();
+                }
                 requested_display_status.turn_night_timer_on();
                 do_blank(
                     &display,
@@ -373,9 +448,6 @@ fn main() -> Result<()> {
                     &mut status,
                     true,
                 );
-            }
-            Message::PageIsDisplayed(number) => {
-                page = number;
             }
         }
     }

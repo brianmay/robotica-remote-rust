@@ -16,10 +16,10 @@ pub enum DisplayCommand {
         usize,
         String,
     ),
+    DisplayNone(usize),
     BlankAll,
     UnBlankAll,
-    PageUp,
-    PageDown,
+    ShowPage(usize),
     ButtonPressed(usize),
     ButtonReleased(usize),
 }

@@ -3,6 +3,9 @@ use std::thread;
 
 use anyhow::Result;
 
+use embedded_graphics::prelude::Point;
+use embedded_graphics::prelude::Size;
+use embedded_graphics::primitives::Rectangle;
 use esp_idf_hal::gpio::InputPin;
 use esp_idf_hal::gpio::OutputPin;
 use ssd1306;
@@ -14,9 +17,8 @@ use esp_idf_hal::prelude::*;
 
 use embedded_graphics::pixelcolor::*;
 
-use crate::messages::Sender;
-
 use super::graphics::display_thread;
+use super::graphics::Button;
 use super::graphics::FlushableDrawTarget;
 use super::DisplayCommand;
 
@@ -27,6 +29,8 @@ use shared_bus::NullMutex;
 use ssd1306::prelude::I2CInterface;
 use ssd1306::size::DisplaySize128x64;
 use ssd1306::Ssd1306;
+
+pub const NUM_PER_PAGE: usize = 2;
 
 type SharedBus<SDA, SCL> = BusManager<NullMutex<Master<I2C0, SDA, SCL>>>;
 type Bus<'a, SDA, SCL> = I2cProxy<'a, NullMutex<Master<I2C0, SDA, SCL>>>;
@@ -85,13 +89,11 @@ fn get_display<'a>(
 }
 
 pub const NUM_DISPLAYS: usize = 2;
-pub const NUM_PAGES: usize = 4;
 
 pub fn connect(
     i2c: i2c::I2C0,
     scl: impl OutputPin + 'static,
     sda: impl InputPin + OutputPin + 'static,
-    tx_main: Sender,
 ) -> Result<mpsc::Sender<DisplayCommand>> {
     let (tx, rx) = mpsc::channel();
 
@@ -102,7 +104,12 @@ pub fn connect(
         let display0 = get_display(bus.acquire_i2c(), 0x3C).unwrap();
         let display1 = get_display(bus.acquire_i2c(), 0x3D).unwrap();
         let mut displays: [_; NUM_DISPLAYS] = [display0, display1];
-        display_thread::<_, NUM_PAGES, NUM_DISPLAYS>(tx_main, &mut displays, rx);
+        let buttons: [_; NUM_PER_PAGE] = [
+            Button::new(0, Rectangle::new(Point::new(0, 0), Size::new(128, 64))),
+            Button::new(1, Rectangle::new(Point::new(0, 0), Size::new(128, 64))),
+        ];
+
+        display_thread::<_, NUM_PER_PAGE, NUM_DISPLAYS>(&mut displays, &buttons, rx);
     })?;
 
     Ok(tx)
