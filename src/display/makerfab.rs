@@ -368,15 +368,16 @@ pub fn connect(
     // DISPON requires some time otherwise we risk SPI data issues
     delay::Ets.delay_us(120_000).unwrap();
 
-    let display = mipidsi::Display::ili9486_rgb666(di, reset);
-    let display = Display(display, bl);
+    let mut display = mipidsi::Display::ili9486_rgb666(di, reset);
 
     // let mut display = ILI9486Rgb666::new();
     // display.init(&mut di, &mut Some(reset), &mut delay::Ets);
 
-    // display
-    //     .set_orientation(mipidsi::Orientation::LandscapeSwapped)
-    //     .unwrap();
+    display
+        .set_orientation(mipidsi::Orientation::Landscape, true, false)
+        .unwrap();
+
+    let display = Display(display, bl);
 
     // let mut display = ili9341::Ili9341::new(
     //     di,
