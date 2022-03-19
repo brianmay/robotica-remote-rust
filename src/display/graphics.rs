@@ -255,7 +255,7 @@ where
         name,
         Point::new(
             bounding_box.top_left.x + 2,
-            (bounding_box.size.height - 4) as i32,
+            (bounding_box.bottom_right().unwrap().y - 4) as i32,
         ),
         MonoTextStyle::new(&FONT_5X8, Rgb555::WHITE.into()),
     )
