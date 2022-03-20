@@ -57,23 +57,6 @@ pub fn configure_devices(_tx: mpsc::Sender<messages::Message>) -> Result<Makerfa
 
     let (wifi, sntp) = wifi::esp::connect()?;
 
-    // let pin = pins.gpio16.into_input().unwrap();
-    // button::configure_button(pin, tx.clone(), button::ButtonId::Physical(0))?;
-
-    // let pin = pins.gpio17.into_input().unwrap();
-    // button::configure_button(pin, tx.clone(), button::ButtonId::Physical(1))?;
-
-    // let mut touch_builder = TouchControllerBuilder::new().unwrap();
-    // let touch_pin1 = touch_builder.add_pin(pins.gpio15, 400).unwrap();
-    // let touch_pin2 = touch_builder.add_pin(pins.gpio12, 400).unwrap();
-    // let touch_pin3 = touch_builder.add_pin(pins.gpio27, 400).unwrap();
-    // let touch_pin4 = touch_builder.add_pin(pins.gpio14, 400).unwrap();
-
-    // button::touch::configure_touch_button(touch_pin1, tx.clone(), button::ButtonId::PageUp)?;
-    // button::touch::configure_touch_button(touch_pin2, tx, button::ButtonId::PageDown)?;
-    // button::touch::configure_touch_button(touch_pin3, tx.clone(), button::ButtonId::Controller(0))?;
-    // button::touch::configure_touch_button(touch_pin4, tx, button::ButtonId::Controller(1))?;
-
     let sda = pins.gpio26.into_output().unwrap();
     let scl = pins.gpio27.into_output().unwrap();
     let config = <i2c::config::MasterConfig as Default>::default().baudrate(400_u32.kHz().into());
