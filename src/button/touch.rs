@@ -18,9 +18,8 @@ use crate::input::InputPinNotify;
 use crate::input::Value;
 use crate::messages;
 
-use super::button;
-use super::notify;
-use super::Active;
+use super::gpio::button;
+use super::gpio::Active;
 use super::ButtonId;
 
 enum TouchDebouncerMessage {
@@ -177,4 +176,15 @@ pub fn configure_touch_button<T: 'static + InputPinNotify<Error = impl Debug + D
     let debounced_encoder_pin = TouchDebouncer::new(pin, 30, 100);
     button(debounced_encoder_pin, Active::Low, id, tx);
     Ok(())
+}
+
+fn notify(subscriber: &Option<InputNotifyCallback>, new_state: Option<Value>) {
+    if let Some(new_state) = new_state {
+        match subscriber {
+            Some(s) => {
+                (*s)(new_state);
+            }
+            None => {}
+        }
+    }
 }

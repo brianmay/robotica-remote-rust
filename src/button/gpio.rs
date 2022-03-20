@@ -21,8 +21,11 @@ use crate::messages;
 use crate::messages::Message::ButtonPress;
 use crate::messages::Message::ButtonRelease;
 
+use super::ButtonId;
+
 pub enum Active {
     Low,
+    #[allow(dead_code)]
     High,
 }
 

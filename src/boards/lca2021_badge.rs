@@ -39,10 +39,10 @@ pub fn configure_devices(tx: mpsc::Sender<messages::Message>) -> Result<Lca2022B
     let (wifi, sntp) = wifi::esp::connect()?;
 
     let pin = pins.gpio16.into_input().unwrap();
-    button::configure_button(pin, tx.clone(), button::ButtonId::Physical(0))?;
+    button::gpio::configure_button(pin, tx.clone(), button::ButtonId::Physical(0))?;
 
     let pin = pins.gpio17.into_input().unwrap();
-    button::configure_button(pin, tx.clone(), button::ButtonId::Physical(1))?;
+    button::gpio::configure_button(pin, tx.clone(), button::ButtonId::Physical(1))?;
 
     let mut touch_builder = TouchControllerBuilder::new().unwrap();
     let touch_pin1 = touch_builder.add_pin(pins.gpio15, 400).unwrap();

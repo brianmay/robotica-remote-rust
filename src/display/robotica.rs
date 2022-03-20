@@ -6,16 +6,9 @@ use smart_leds::RGB;
 use smart_leds_trait::SmartLedsWrite;
 use ws2812_esp32_rmt_driver::Ws2812Esp32Rmt;
 
-use crate::messages::Message;
-use crate::messages::Sender;
-
 use super::DisplayCommand;
 
-fn display_thread(
-    mut leds: Ws2812Esp32Rmt,
-    tx_main: mpsc::Sender<Message>,
-    rx: mpsc::Receiver<DisplayCommand>,
-) {
+fn display_thread(mut leds: Ws2812Esp32Rmt, rx: mpsc::Receiver<DisplayCommand>) {
     let color = RGB::from((1, 1, 1));
     let blank_color = RGB::from((0, 0, 0));
 
@@ -25,8 +18,6 @@ fn display_thread(
 
     let iter = pixels.iter().copied();
     leds.write(iter).unwrap();
-
-    tx_main.send(Message::PageIsDisplayed(0)).unwrap();
 
     for received in rx {
         match received {
@@ -71,21 +62,22 @@ fn display_thread(
                 let iter = pixels.iter().copied();
                 leds.write(iter).unwrap();
             }
-            DisplayCommand::PageUp => {}
-            DisplayCommand::PageDown => {}
             DisplayCommand::ButtonPressed(_id) => {}
             DisplayCommand::ButtonReleased(_id) => {}
+            DisplayCommand::Started => {}
+            DisplayCommand::DisplayNone(_) => {}
+            DisplayCommand::ShowPage(_) => {}
         }
     }
 }
 
-pub fn connect(pin: u32, tx_main: Sender) -> Result<mpsc::Sender<DisplayCommand>> {
+pub fn connect(pin: u32) -> Result<mpsc::Sender<DisplayCommand>> {
     let leds = Ws2812Esp32Rmt::new(0, pin).unwrap();
 
     let (tx, rx) = mpsc::channel();
 
     thread::spawn(move || {
-        display_thread(leds, tx_main, rx);
+        display_thread(leds, rx);
     });
 
     Ok(tx)

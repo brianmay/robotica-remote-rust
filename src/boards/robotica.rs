@@ -34,18 +34,18 @@ pub fn configure_devices(tx: mpsc::Sender<messages::Message>) -> Result<Robotica
     let pins = peripherals.pins;
 
     let pin = pins.gpio33.into_input().unwrap();
-    button::configure_button(pin, tx.clone(), button::ButtonId::Physical(0))?;
+    button::gpio::configure_button(pin, tx.clone(), button::ButtonId::Physical(0))?;
 
     let pin = pins.gpio27.into_input().unwrap();
-    button::configure_button(pin, tx.clone(), button::ButtonId::Physical(1))?;
+    button::gpio::configure_button(pin, tx.clone(), button::ButtonId::Physical(1))?;
 
     let pin = pins.gpio15.into_input().unwrap();
-    button::configure_button(pin, tx.clone(), button::ButtonId::Physical(2))?;
+    button::gpio::configure_button(pin, tx.clone(), button::ButtonId::Physical(2))?;
 
     let pin = pins.gpio12.into_input().unwrap();
-    button::configure_button(pin, tx.clone(), button::ButtonId::Physical(3))?;
+    button::gpio::configure_button(pin, tx, button::ButtonId::Physical(3))?;
 
-    let display = display::robotica::connect(13, tx)?;
+    let display = display::robotica::connect(13)?;
 
     let (wifi, sntp) = wifi::esp::connect()?;
 
