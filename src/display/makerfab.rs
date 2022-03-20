@@ -32,7 +32,7 @@ use mipidsi::models::ILI9486Rgb666;
 use std::sync::mpsc;
 use std::thread;
 
-pub const NUM_PER_PAGE: usize = 4;
+pub const NUM_PER_PAGE: usize = 8;
 pub const NUM_DISPLAYS: usize = 1;
 
 // #[derive(Clone)]
@@ -404,10 +404,35 @@ pub fn connect(
     builder.spawn(move || {
         let mut displays: [_; NUM_DISPLAYS] = [display];
         let buttons: [_; NUM_PER_PAGE] = [
-            Button::new(0, Rectangle::new(Point::new(0, 0), Size::new(128, 64))),
-            Button::new(0, Rectangle::new(Point::new(128, 0), Size::new(128, 64))),
-            Button::new(0, Rectangle::new(Point::new(0, 128), Size::new(128, 64))),
-            Button::new(0, Rectangle::new(Point::new(128, 128), Size::new(128, 64))),
+            Button::new(0, Rectangle::new(Point::new(10, 10), Size::new(128, 64))),
+            Button::new(
+                0,
+                Rectangle::new(Point::new(128 + 20, 10), Size::new(128, 64)),
+            ),
+            Button::new(
+                0,
+                Rectangle::new(Point::new(10, 64 + 20), Size::new(128, 64)),
+            ),
+            Button::new(
+                0,
+                Rectangle::new(Point::new(128 + 20, 64 + 20), Size::new(128, 64)),
+            ),
+            Button::new(
+                0,
+                Rectangle::new(Point::new(10, 64 * 2 + 30), Size::new(128, 64)),
+            ),
+            Button::new(
+                0,
+                Rectangle::new(Point::new(128 + 20, 64 * 2 + 30), Size::new(128, 64)),
+            ),
+            Button::new(
+                0,
+                Rectangle::new(Point::new(10, 64 * 3 + 40), Size::new(128, 64)),
+            ),
+            Button::new(
+                0,
+                Rectangle::new(Point::new(128 + 20, 64 * 3 + 40), Size::new(128, 64)),
+            ),
         ];
 
         display_thread::<_, NUM_PER_PAGE, NUM_DISPLAYS>(&mut displays, &buttons, rx);
