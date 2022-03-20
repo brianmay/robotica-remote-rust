@@ -26,11 +26,12 @@ pub trait FlushableDrawTarget: DrawTarget {
 }
 
 #[derive(Clone)]
-pub struct State {
+struct State {
     state: DisplayState,
     icon: Icon,
     name: String,
     pressed: bool,
+    clear_required: bool,
 }
 
 pub fn display_thread<D, const NUM_PER_PAGE: usize, const NUM_DISPLAYS: usize>(
@@ -58,14 +59,19 @@ pub fn display_thread<D, const NUM_PER_PAGE: usize, const NUM_DISPLAYS: usize>(
             DisplayCommand::Started => {
                 for display in displays.iter_mut() {
                     display.clear(Rgb555::GREEN.into()).unwrap();
+                }
+                for component in components.iter() {
+                    component.clear(displays);
+                }
+                for display in displays.iter_mut() {
                     display.flush().unwrap();
                 }
             }
             DisplayCommand::DisplayState(state, icon, id, name) => {
-                let pressed = if let Some(old) = &states[id] {
-                    old.pressed
+                let (pressed, clear_required) = if let Some(old) = &states[id] {
+                    (old.pressed, old.clear_required)
                 } else {
-                    false
+                    (false, false)
                 };
 
                 let page = State {
@@ -73,6 +79,7 @@ pub fn display_thread<D, const NUM_PER_PAGE: usize, const NUM_DISPLAYS: usize>(
                     icon,
                     name,
                     pressed,
+                    clear_required,
                 };
                 states[id] = Some(page);
                 update_components[id] = true;
@@ -95,6 +102,9 @@ pub fn display_thread<D, const NUM_PER_PAGE: usize, const NUM_DISPLAYS: usize>(
             DisplayCommand::ShowPage(page_num) => {
                 selected_page_number = page_num;
                 update_components = [true; NUM_PER_PAGE];
+                for page in &mut states.iter_mut().flatten() {
+                    page.clear_required = true;
+                }
             }
             DisplayCommand::ButtonPressed(id) => {
                 if let Some(page) = &mut states[id] {
@@ -105,15 +115,16 @@ pub fn display_thread<D, const NUM_PER_PAGE: usize, const NUM_DISPLAYS: usize>(
             DisplayCommand::ButtonReleased(id) => {
                 if let Some(page) = &mut states[id] {
                     page.pressed = false;
+                    page.clear_required = true;
                 }
                 update_components = [true; NUM_PER_PAGE];
             }
         }
 
         for (id, component) in components.iter().enumerate() {
-            let state = &states[id];
+            let state_or_none = &mut states[id];
             if update_components[id] {
-                component.draw(displays, state, selected_page_number);
+                component.draw(displays, state_or_none, selected_page_number);
             }
         }
 
@@ -139,7 +150,17 @@ impl Button {
         }
     }
 
-    fn draw<D>(&self, displays: &mut [D], state: &Option<State>, page_num: usize)
+    fn clear<D>(&self, displays: &mut [D])
+    where
+        D: FlushableDrawTarget,
+        D::Color: PixelColor + From<Gray8> + From<Rgb555> + From<Rgb888>,
+        D::Error: std::fmt::Debug,
+    {
+        let display = &mut displays[self.display];
+        led_clear(display, &self.bounding_box);
+    }
+
+    fn draw<D>(&self, displays: &mut [D], state: &mut Option<State>, page_num: usize)
     where
         D: FlushableDrawTarget,
         D::Color: PixelColor + From<Gray8> + From<Rgb555> + From<Rgb888>,
@@ -152,7 +173,7 @@ impl Button {
 
 fn page_draw<D>(
     display: &mut D,
-    state_or_none: &Option<State>,
+    state_or_none: &mut Option<State>,
     number: usize,
     bounding_box: &Rectangle,
 ) where
@@ -160,17 +181,21 @@ fn page_draw<D>(
     D::Color: PixelColor + From<Gray8> + From<Rgb555> + From<Rgb888>,
     D::Error: std::fmt::Debug,
 {
-    led_clear(display, bounding_box);
-
     if let Some(state) = state_or_none {
+        if state.clear_required {
+            led_clear(display, bounding_box);
+            state.clear_required = false;
+        }
         let image_category = get_image_category(&state.state);
         let image_data = get_image_data(&image_category, &state.icon);
         led_draw_image(display, image_data, bounding_box);
-        led_draw_overlay(display, &state.state, bounding_box);
+        led_draw_overlay(display, state, bounding_box);
         led_draw_name(display, &state.name, bounding_box);
         if state.pressed {
             led_draw_pressed(display, bounding_box);
         }
+    } else {
+        led_clear(display, bounding_box);
     }
 
     led_draw_number(display, number, bounding_box);
@@ -341,13 +366,13 @@ where
     Image::new(&tga, Point::new(x, y)).draw(display).unwrap();
 }
 
-fn led_draw_overlay<D>(display: &mut D, state: &DisplayState, bounding_box: &Rectangle)
+fn led_draw_overlay<D>(display: &mut D, state: &mut State, bounding_box: &Rectangle)
 where
     D: DrawTarget,
     D::Color: From<Rgb555>,
     D::Error: std::fmt::Debug,
 {
-    let text = match state {
+    let text = match state.state {
         DisplayState::HardOff => "Hard off",
         DisplayState::Error => "Error",
         DisplayState::Unknown => "Lost",
@@ -356,7 +381,7 @@ where
         DisplayState::OnOther => "Other",
     };
 
-    if matches!(state, DisplayState::Error | DisplayState::Unknown) {
+    if matches!(state.state, DisplayState::Error | DisplayState::Unknown) {
         let center = bounding_box.center();
         let size = Size::new(60, 24);
 
@@ -383,5 +408,7 @@ where
         )
         .draw(display)
         .unwrap();
+
+        state.clear_required = true;
     }
 }
