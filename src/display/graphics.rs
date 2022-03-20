@@ -328,9 +328,9 @@ where
 
     let x = max(
         bounding_box.bottom_right().unwrap().x - size.width as i32,
-        0,
+        bounding_box.top_left.x,
     );
-    let y = max(center.y - size.height as i32 / 2, 0);
+    let y = max(center.y - size.height as i32 / 2, bounding_box.top_left.y);
 
     Image::new(&tga, Point::new(x, y)).draw(display).unwrap();
 }
