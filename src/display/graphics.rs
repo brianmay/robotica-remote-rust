@@ -55,6 +55,12 @@ pub fn display_thread<D, const NUM_PER_PAGE: usize, const NUM_DISPLAYS: usize>(
         let mut update_components: [bool; NUM_PER_PAGE] = [false; NUM_PER_PAGE];
 
         match received {
+            DisplayCommand::Started => {
+                for display in displays.iter_mut() {
+                    display.clear(Rgb555::GREEN.into()).unwrap();
+                    display.flush().unwrap();
+                }
+            }
             DisplayCommand::DisplayState(state, icon, id, name) => {
                 let pressed = if let Some(old) = &states[id] {
                     old.pressed

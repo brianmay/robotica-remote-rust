@@ -272,8 +272,9 @@ fn main() -> Result<()> {
     let mut page_num = 0;
     let last_page = get_num_pages(&controllers) - 1;
 
-    update_displays(&display, &controllers, page_num);
+    display.send(DisplayCommand::Started).unwrap();
     display.send(DisplayCommand::ShowPage(page_num)).unwrap();
+    update_displays(&display, &controllers, page_num);
 
     for received in rx {
         match received {

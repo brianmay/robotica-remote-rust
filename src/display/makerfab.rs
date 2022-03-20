@@ -17,8 +17,8 @@ use esp_idf_hal::gpio::Gpio13;
 use esp_idf_hal::gpio::Gpio14;
 use esp_idf_hal::gpio::Gpio15;
 use esp_idf_hal::gpio::Gpio21;
-use esp_idf_hal::gpio::Gpio26;
 use esp_idf_hal::gpio::Gpio33;
+use esp_idf_hal::gpio::Gpio4;
 use esp_idf_hal::gpio::Output;
 use esp_idf_hal::gpio::Unknown;
 use esp_idf_hal::prelude::*;
@@ -115,7 +115,7 @@ type SpiInterface = SPIInterface<
     Gpio33<Output>,
     Gpio15<Output>,
 >;
-type OrigDisplay = mipidsi::Display<SpiInterface, Gpio26<Output>, ILI9486Rgb666>;
+type OrigDisplay = mipidsi::Display<SpiInterface, Gpio4<Output>, ILI9486Rgb666>;
 
 struct Display<BL>(OrigDisplay, BL);
 
@@ -226,9 +226,10 @@ impl<BL: OutputPin> FlushableDrawTarget for Display<BL> {
 //     Ok(tx)
 // }
 
+#[allow(clippy::too_many_arguments)]
 pub fn connect(
     dc: gpio::Gpio33<gpio::Unknown>,
-    rst: gpio::Gpio26<gpio::Unknown>,
+    rst: gpio::Gpio4<gpio::Unknown>,
     spi: spi::SPI2,
     sclk: gpio::Gpio14<gpio::Unknown>,
     sdo: gpio::Gpio13<gpio::Unknown>,

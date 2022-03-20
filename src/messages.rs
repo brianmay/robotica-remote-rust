@@ -6,7 +6,9 @@ pub enum Message {
     MqttConnect,
     MqttDisconnect,
     MqttReceived(String, String, mqtt::Label),
+    #[allow(dead_code)]
     ButtonPress(button::ButtonId),
+    #[allow(dead_code)]
     ButtonRelease(button::ButtonId),
     BlankDisplays,
 }

@@ -17,6 +17,7 @@ pub mod graphics;
 
 #[derive(Debug)]
 pub enum DisplayCommand {
+    Started,
     DisplayState(
         button_controllers::DisplayState,
         button_controllers::Icon,
