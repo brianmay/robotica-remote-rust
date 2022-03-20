@@ -110,14 +110,14 @@ pub fn display_thread<D, const NUM_PER_PAGE: usize, const NUM_DISPLAYS: usize>(
                 if let Some(page) = &mut states[id] {
                     page.pressed = true;
                 }
-                update_components = [true; NUM_PER_PAGE];
+                update_components[id] = true;
             }
             DisplayCommand::ButtonReleased(id) => {
                 if let Some(page) = &mut states[id] {
                     page.pressed = false;
                     page.clear_required = true;
                 }
-                update_components = [true; NUM_PER_PAGE];
+                update_components[id] = true;
             }
         }
 
