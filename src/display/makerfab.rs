@@ -69,7 +69,7 @@ impl<BL> DrawTarget for Display<BL> {
     }
 
     fn fill_solid(&mut self, area: &Rectangle, color: Self::Color) -> Result<(), Self::Error> {
-        self.fill_contiguous(area, core::iter::repeat(color))
+        self.0.fill_solid(area, color)
     }
 
     fn clear(&mut self, color: Self::Color) -> Result<(), Self::Error> {
