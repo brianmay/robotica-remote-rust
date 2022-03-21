@@ -1,6 +1,7 @@
 use std::cmp::max;
 use std::sync::mpsc;
 
+use embedded_graphics_framebuf::FrameBuf;
 use log::*;
 
 use embedded_graphics::mono_font::{ascii::FONT_10X20, MonoTextStyle};
@@ -145,8 +146,24 @@ impl Button {
         D::Color: PixelColor + From<Gray8> + From<Rgb555> + From<Rgb888>,
         D::Error: std::fmt::Debug,
     {
+        static mut FBUFF: FrameBuf<Rgb555, 128_usize, 64_usize> =
+            FrameBuf([[Rgb555::BLACK; 128]; 64]);
+        let mut fbuff = unsafe { &mut FBUFF };
+        let bounding_box = Rectangle {
+            top_left: Point::zero(),
+            size: Size::new(128, 64),
+        };
+        page_draw(&mut fbuff, state, page_num, &bounding_box);
+
         let display = &mut displays[self.display];
-        page_draw(display, state, page_num, &self.bounding_box);
+
+        let u16_iter = fbuff.into_iter().map(|c| {
+            let c: D::Color = c.into();
+            c
+        });
+        display
+            .fill_contiguous(&self.bounding_box, u16_iter)
+            .unwrap();
     }
 }
 
@@ -226,7 +243,7 @@ where
         .into_styled(
             PrimitiveStyleBuilder::new()
                 .reset_fill_color()
-                .stroke_color(Rgb555::YELLOW.into())
+                .stroke_color(Rgb555::GREEN.into())
                 .stroke_width(1)
                 .build(),
         )

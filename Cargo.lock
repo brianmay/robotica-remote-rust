@@ -623,6 +623,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "embedded-graphics-framebuf"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "de12fb0fd324d6d71b1c3dfad04bdb16b2c0d57c7a86c840a6dfbd7b8d54e4ea"
+dependencies = [
+ "embedded-graphics",
+]
+
+[[package]]
 name = "embedded-hal"
 version = "0.2.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -836,7 +845,6 @@ dependencies = [
 [[package]]
 name = "ft6x36"
 version = "0.1.0"
-source = "git+https://github.com/pyaillet/ft6x36-rs.git?branch=main#c419b24b5e1916dd08bed7b05b038411f2bf035c"
 dependencies = [
  "embedded-hal 0.2.7",
  "num_enum",
@@ -1473,6 +1481,7 @@ dependencies = [
  "display-interface",
  "display-interface-spi",
  "embedded-graphics",
+ "embedded-graphics-framebuf",
  "embedded-hal 1.0.0-alpha.7",
  "embedded-svc",
  "embuild",
