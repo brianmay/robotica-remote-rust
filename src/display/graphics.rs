@@ -94,7 +94,7 @@ pub fn display_thread<D, const NUM_PER_PAGE: usize, const NUM_DISPLAYS: usize>(
             }
             DisplayCommand::ShowPage(page_num) => {
                 selected_page_number = page_num;
-                update_components = [true; NUM_PER_PAGE];
+                update_components = [false; NUM_PER_PAGE];
             }
             DisplayCommand::ButtonPressed(id) => {
                 if let Some(page) = &mut states[id] {
