@@ -604,7 +604,7 @@ checksum = "e78d4f1cc4ae33bbfc157ed5d5a5ef3bc29227303d595861deb238fcec4e9457"
 [[package]]
 name = "embedded-graphics"
 version = "0.7.1"
-source = "git+https://github.com/brianmay/embedded-graphics?branch=greyscale_color_conversion#9163c8b533ae2140167096e43020de9fb7cdf70a"
+source = "git+https://github.com/embedded-graphics/embedded-graphics?branch=master#f9a7b1dee4c31a6bb788d820a10de47f66aa8c61"
 dependencies = [
  "az",
  "byteorder",
@@ -616,7 +616,7 @@ dependencies = [
 [[package]]
 name = "embedded-graphics-core"
 version = "0.3.3"
-source = "git+https://github.com/brianmay/embedded-graphics?branch=greyscale_color_conversion#9163c8b533ae2140167096e43020de9fb7cdf70a"
+source = "git+https://github.com/embedded-graphics/embedded-graphics?branch=master#f9a7b1dee4c31a6bb788d820a10de47f66aa8c61"
 dependencies = [
  "az",
  "byteorder",
