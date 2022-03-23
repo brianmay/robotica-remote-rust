@@ -50,7 +50,6 @@ pub fn button<T: InputPinNotify<Error = impl Debug + Display>>(
         };
 
         if has_changed {
-            let id = id.clone();
             if pressed {
                 tx.send(ButtonPress(id)).unwrap();
             } else {
