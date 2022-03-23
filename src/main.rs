@@ -397,6 +397,17 @@ fn main() -> Result<()> {
                     true,
                 );
             }
+            Message::ButtonPress(ButtonId::NotAButton) => {
+                info!("Got not a button press");
+                requested_display_status.turn_night_timer_on();
+                do_blank(
+                    &display,
+                    &mut timer,
+                    &requested_display_status,
+                    &mut status,
+                    true,
+                );
+            }
             Message::ButtonRelease(ButtonId::Physical(id_in_page)) => {
                 info!("Got button release");
                 display

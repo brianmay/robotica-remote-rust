@@ -7,6 +7,7 @@ pub enum ButtonId {
     Controller(usize),
     PageUp,
     PageDown,
+    NotAButton,
 }
 
 #[cfg(feature = "lca2021_badge")]
