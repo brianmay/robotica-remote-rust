@@ -197,7 +197,7 @@ where
         .bounding_box()
         .into_styled(
             PrimitiveStyleBuilder::new()
-                .fill_color(Rgb555::BLUE.into())
+                .fill_color(Rgb555::RED.into())
                 .stroke_color(Rgb555::YELLOW.into())
                 .stroke_width(1)
                 .build(),
