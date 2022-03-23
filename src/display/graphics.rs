@@ -57,7 +57,7 @@ pub fn display_thread<D, const NUM_PER_PAGE: usize, const NUM_DISPLAYS: usize>(
         match received {
             DisplayCommand::Started => {
                 for display in displays.iter_mut() {
-                    display.clear(Rgb555::GREEN.into()).unwrap();
+                    display.clear(Rgb555::BLUE.into()).unwrap();
                     display.flush().unwrap();
                 }
             }

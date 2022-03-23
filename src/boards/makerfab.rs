@@ -1,24 +1,22 @@
+mod touchscreen;
+
 use std::sync::mpsc;
-use std::thread;
-use std::time::Duration;
 
 use anyhow::Result;
 
-use esp_idf_hal::i2c;
-use esp_idf_hal::prelude::FromValueType;
-use esp_idf_hal::prelude::Peripherals;
-
+use embedded_graphics::prelude::*;
+use embedded_graphics::primitives::Rectangle;
+use esp_idf_hal::prelude::*;
 use esp_idf_svc::sntp::EspSntp;
 use esp_idf_svc::wifi::EspWifi;
-use ft6x36::Ft6x36;
 
+use crate::button::ButtonId;
 use crate::display;
+use crate::display::makerfab::NUM_PER_PAGE;
 use crate::messages;
 use crate::wifi;
 
 use super::Board;
-
-use log::*;
 
 pub const NUM_CONTROLLERS_PER_PAGE: usize = display::makerfab::NUM_PER_PAGE;
 
@@ -36,12 +34,52 @@ impl Board for Makerfab {
     }
 }
 
-pub fn configure_devices(_tx: mpsc::Sender<messages::Message>) -> Result<Makerfab> {
+pub struct ButtonInfo {
+    pub position: Rectangle,
+    pub id: ButtonId,
+}
+
+pub fn configure_devices(tx: mpsc::Sender<messages::Message>) -> Result<Makerfab> {
     let peripherals = Peripherals::take().unwrap();
     let pins = peripherals.pins;
 
     let backlight = pins.gpio5.into_output().unwrap();
     // backlight.set_low().unwrap();
+
+    let buttons: [ButtonInfo; NUM_PER_PAGE] = [
+        ButtonInfo {
+            position: Rectangle::new(Point::new(10, 10), Size::new(128, 64)),
+            id: ButtonId::Physical(0),
+        },
+        ButtonInfo {
+            position: Rectangle::new(Point::new(128 + 20, 10), Size::new(128, 64)),
+            id: ButtonId::Physical(1),
+        },
+        ButtonInfo {
+            position: Rectangle::new(Point::new(10, 64 + 20), Size::new(128, 64)),
+            id: ButtonId::Physical(2),
+        },
+        ButtonInfo {
+            position: Rectangle::new(Point::new(128 + 20, 64 + 20), Size::new(128, 64)),
+            id: ButtonId::Physical(3),
+        },
+        ButtonInfo {
+            position: Rectangle::new(Point::new(10, 64 * 2 + 30), Size::new(128, 64)),
+            id: ButtonId::Physical(4),
+        },
+        ButtonInfo {
+            position: Rectangle::new(Point::new(128 + 20, 64 * 2 + 30), Size::new(128, 64)),
+            id: ButtonId::Physical(5),
+        },
+        ButtonInfo {
+            position: Rectangle::new(Point::new(10, 64 * 3 + 40), Size::new(128, 64)),
+            id: ButtonId::Physical(6),
+        },
+        ButtonInfo {
+            position: Rectangle::new(Point::new(128 + 20, 64 * 3 + 40), Size::new(128, 64)),
+            id: ButtonId::Physical(7),
+        },
+    ];
 
     let display = display::makerfab::connect(
         pins.gpio33,
@@ -52,6 +90,7 @@ pub fn configure_devices(_tx: mpsc::Sender<messages::Message>) -> Result<Makerfa
         pins.gpio12,
         pins.gpio15,
         backlight,
+        &buttons,
     )
     .unwrap();
 
@@ -59,24 +98,8 @@ pub fn configure_devices(_tx: mpsc::Sender<messages::Message>) -> Result<Makerfa
 
     let sda = pins.gpio26.into_output().unwrap();
     let scl = pins.gpio27.into_output().unwrap();
-    let config = <i2c::config::MasterConfig as Default>::default().baudrate(400_u32.kHz().into());
-    let i2c1 =
-        i2c::Master::<i2c::I2C1, _, _>::new(peripherals.i2c1, i2c::MasterPins { sda, scl }, config)
-            .unwrap();
-
-    let mut touch_screen = Ft6x36::new(i2c1);
-
-    touch_screen.init().unwrap();
-    match touch_screen.get_info() {
-        Some(info) => info!("Touch screen info: {info:?}"),
-        None => warn!("No info"),
-    }
-
-    thread::spawn(move || loop {
-        let x = touch_screen.get_touch_event().unwrap();
-        println!("{x:?}");
-        thread::sleep(Duration::from_millis(500));
-    });
+    let i2c1 = peripherals.i2c1;
+    touchscreen::connect(i2c1, sda, scl, buttons, tx);
 
     Ok(Makerfab {
         wifi,

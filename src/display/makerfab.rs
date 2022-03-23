@@ -1,5 +1,6 @@
 use super::graphics::FlushableDrawTarget;
 use super::DisplayCommand;
+use crate::boards::makerfab::ButtonInfo;
 use crate::display::graphics::display_thread;
 use crate::display::graphics::Button;
 use anyhow::Result;
@@ -102,6 +103,7 @@ pub fn connect(
     sdi: gpio::Gpio12<gpio::Unknown>,
     cs: gpio::Gpio15<gpio::Unknown>,
     bl: impl OutputPin + Send + 'static,
+    buttons: &[ButtonInfo; NUM_PER_PAGE],
 ) -> Result<mpsc::Sender<DisplayCommand>> {
     let (tx, rx) = mpsc::channel();
 
@@ -166,40 +168,20 @@ pub fn connect(
     let bounding_box = display.bounding_box();
     println!("sssssssssssss {:?}", bounding_box);
 
+    let buttons: [_; NUM_PER_PAGE] = [
+        Button::new(0, buttons[0].position),
+        Button::new(0, buttons[1].position),
+        Button::new(0, buttons[2].position),
+        Button::new(0, buttons[3].position),
+        Button::new(0, buttons[4].position),
+        Button::new(0, buttons[5].position),
+        Button::new(0, buttons[6].position),
+        Button::new(0, buttons[7].position),
+    ];
+
     let builder = thread::Builder::new().stack_size(8 * 1024);
     builder.spawn(move || {
         let mut displays: [_; NUM_DISPLAYS] = [display];
-        let buttons: [_; NUM_PER_PAGE] = [
-            Button::new(0, Rectangle::new(Point::new(10, 10), Size::new(128, 64))),
-            Button::new(
-                0,
-                Rectangle::new(Point::new(128 + 20, 10), Size::new(128, 64)),
-            ),
-            Button::new(
-                0,
-                Rectangle::new(Point::new(10, 64 + 20), Size::new(128, 64)),
-            ),
-            Button::new(
-                0,
-                Rectangle::new(Point::new(128 + 20, 64 + 20), Size::new(128, 64)),
-            ),
-            Button::new(
-                0,
-                Rectangle::new(Point::new(10, 64 * 2 + 30), Size::new(128, 64)),
-            ),
-            Button::new(
-                0,
-                Rectangle::new(Point::new(128 + 20, 64 * 2 + 30), Size::new(128, 64)),
-            ),
-            Button::new(
-                0,
-                Rectangle::new(Point::new(10, 64 * 3 + 40), Size::new(128, 64)),
-            ),
-            Button::new(
-                0,
-                Rectangle::new(Point::new(128 + 20, 64 * 3 + 40), Size::new(128, 64)),
-            ),
-        ];
 
         display_thread::<_, NUM_PER_PAGE, NUM_DISPLAYS>(&mut displays, &buttons, rx);
     })?;
