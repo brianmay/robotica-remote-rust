@@ -1082,9 +1082,9 @@ dependencies = [
 
 [[package]]
 name = "log"
-version = "0.4.14"
+version = "0.4.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "51b9bbe6c47d51fc3e1a9b945965946b4c44142ab8792c50835a980d362c2710"
+checksum = "6389c490849ff5bc16be905ae24bc913a9c8892e19b2341dbc175e14c341c2b8"
 dependencies = [
  "cfg-if",
 ]
@@ -1135,7 +1135,7 @@ dependencies = [
 [[package]]
 name = "mipidsi"
 version = "0.1.0"
-source = "git+https://github.com/brianmay/mipidsi?branch=hacks#d23c3da08bd9b7f69c11723e24affc0b9d9840d4"
+source = "git+https://github.com/brianmay/mipidsi?branch=hacks#7d41c0334d3a7e7bb50725ef9c8f20dc3a4025a7"
 dependencies = [
  "display-interface",
  "embedded-graphics-core",
