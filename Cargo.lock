@@ -845,6 +845,7 @@ dependencies = [
 [[package]]
 name = "ft6x36"
 version = "0.1.0"
+source = "git+https://github.com/pyaillet/ft6x36-rs?branch=main#a8b69cb41552ce5e336410e1f10a1426cb2cb080"
 dependencies = [
  "embedded-hal 0.2.7",
  "num_enum",

@@ -5,7 +5,7 @@ use esp_idf_hal::{
     i2c,
     prelude::*,
 };
-use ft6x36::{Ft6x36, Point};
+use ft6x36::{Ft6x36, TouchPoint};
 use log::*;
 
 use crate::{
@@ -16,14 +16,15 @@ use crate::{
 
 use super::ButtonInfo;
 
-fn translate(p: Point) -> Point {
-    Point {
+fn translate(p: TouchPoint) -> TouchPoint {
+    TouchPoint {
         x: p.y,
         y: 320u16.saturating_sub(p.x),
+        touch_type: p.touch_type,
     }
 }
 
-fn get_button_for_point(buttons: &[ButtonInfo], p: Point) -> Option<&ButtonInfo> {
+fn get_button_for_point(buttons: &[ButtonInfo], p: TouchPoint) -> Option<&ButtonInfo> {
     for button in buttons {
         let tl = button.position.top_left;
         let br = button.position.bottom_right().unwrap();
