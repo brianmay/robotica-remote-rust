@@ -34,30 +34,11 @@ fn wifi(
 ) -> Result<EspWifi> {
     let mut wifi = EspWifi::new(netif_stack, sys_loop_stack, default_nvs)?;
 
-    info!("Wifi created, about to scan");
-
-    let ap_infos = wifi.scan()?;
-
-    let ours = ap_infos.into_iter().find(|a| a.ssid == SSID);
-
-    let channel = if let Some(ours) = ours {
-        info!(
-            "Found configured access point {} on channel {}",
-            SSID, ours.channel
-        );
-        Some(ours.channel)
-    } else {
-        info!(
-            "Configured access point {} not found during scanning, will go with unknown channel",
-            SSID
-        );
-        None
-    };
+    info!("Connecting to wifi");
 
     wifi.set_configuration(&Configuration::Client(ClientConfiguration {
         ssid: SSID.into(),
         password: PASS.into(),
-        channel,
         ..Default::default()
     }))?;
 
@@ -71,9 +52,6 @@ fn wifi(
         matches!(&status.0, Started(Connected(Done(_ip_settings))))
     }
     wifi.wait_status(check_status);
-
-    info!("Wifi configuration set, about to get status");
-
     let status = wifi.get_status();
 
     if let Started(Connected(Done(ip_settings))) = status.0 {
