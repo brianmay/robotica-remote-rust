@@ -652,9 +652,9 @@ dependencies = [
 
 [[package]]
 name = "embedded-svc"
-version = "0.17.4"
+version = "0.17.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "67801f7f9aaab81ebbdd9dd231dca1dcfe560622c5eaee9ea2c89a30360c8cad"
+checksum = "190c964bafb70c8ef09099ce78c745ad8ad0190cd76753cb3bde2fba24c71991"
 dependencies = [
  "anyhow",
  "enumset",
