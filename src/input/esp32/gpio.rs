@@ -1,5 +1,6 @@
 use std::default::Default;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::Duration;
 
 use arr_macro::arr;
 use embedded_svc::event_bus::EventBus;
@@ -114,7 +115,11 @@ extern "C" fn gpio_handler(data: *mut c_void) {
     unsafe {
         match &mut EVENT_LOOP {
             Some(x) => {
-                x.post(&EventLoopMessage(pin_number, value), None).unwrap();
+                x.post(
+                    &EventLoopMessage(pin_number, value),
+                    Some(Duration::from_secs(0)),
+                )
+                .unwrap();
             }
             None => {}
         }

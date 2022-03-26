@@ -3,6 +3,7 @@
 use std::ffi::c_void;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
+use std::time::Duration;
 use sys::c_types;
 
 use arr_macro::arr;
@@ -82,7 +83,7 @@ unsafe extern "C" fn touch_handler(data: *mut c_void) {
                     Some(x) => {
                         x.post(
                             &EventLoopMessage(pin_number, channel as sys::touch_pad_t, Value::Low),
-                            None,
+                            Some(Duration::from_secs(0)),
                         )
                         .unwrap();
                     }
