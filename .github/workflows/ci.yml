@@ -25,6 +25,7 @@ jobs:
         with:
           default: true
           ldproxy: true
+      - uses: Swatinem/rust-cache@v1
       - name: Build | Fmt Check
         run: cargo fmt -- --check
       - name: Build | Clippy
