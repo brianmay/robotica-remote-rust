@@ -52,6 +52,7 @@ fn wifi(
         matches!(&status.0, Started(Connected(Done(_ip_settings))))
     }
     wifi.wait_status(check_status);
+
     let status = wifi.get_status();
 
     if let Started(Connected(Done(ip_settings))) = status.0 {
