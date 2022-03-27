@@ -4,11 +4,9 @@ use crate::boards::makerfab::ButtonInfo;
 use crate::display::graphics::display_thread;
 use crate::display::graphics::Button;
 use anyhow::Result;
-use display_interface::DisplayError;
 use display_interface_spi::SPIInterface;
 use embedded_graphics::prelude::*;
 use embedded_graphics::primitives::Rectangle;
-use embedded_hal::delay::blocking::DelayUs;
 use embedded_hal::digital::blocking::OutputPin;
 use embedded_hal::spi::MODE_0;
 use esp_idf_hal::delay;
@@ -27,8 +25,6 @@ use esp_idf_hal::spi;
 use esp_idf_hal::spi::Master;
 use esp_idf_hal::spi::SPI2;
 use log::info;
-use mipidsi::instruction::Instruction;
-use mipidsi::models::write_command;
 use mipidsi::models::ILI9486Rgb666;
 use std::sync::mpsc;
 use std::thread;
@@ -132,32 +128,10 @@ pub fn connect(
     };
 
     let spi = spi::Master::<spi::SPI2, _, _, _, _>::new(spi, pins, config)?;
-    let mut di = SPIInterface::new(spi, dc.into_output()?, cs);
-
-    let mut x = || -> Result<(), DisplayError> {
-        write_command(&mut di, Instruction::SLPOUT, &[])?; // turn off sleep
-        write_command(&mut di, Instruction::COLMOD, &[0b0110_0110])?; // 18bit 256k colors
-        write_command(&mut di, Instruction::MADCTL, &[0b0000_0000])?; // left -> right, bottom -> top RGB
-        write_command(&mut di, Instruction::VCMOFSET, &[0x00, 0x48, 0x00, 0x48])?; //VCOM  Control 1 [00 40 00 40]
-        write_command(&mut di, Instruction::INVCO, &[0x0])?; //Inversion Control [00]
-
-        // optional gamma setup
-        // write_command(di, Instruction::PGC, &[0x00, 0x2C, 0x2C, 0x0B, 0x0C, 0x04, 0x4C, 0x64, 0x36, 0x03, 0x0E, 0x01, 0x10, 0x01, 0x00])?; // Positive Gamma Control
-        // write_command(di, Instruction::NGC, &[0x0F, 0x37, 0x37, 0x0C, 0x0F, 0x05, 0x50, 0x32, 0x36, 0x04, 0x0B, 0x00, 0x19, 0x14, 0x0F])?; // Negative Gamma Control
-
-        write_command(&mut di, Instruction::DFC, &[0b0000_0010, 0x02, 0x3B])?;
-        write_command(&mut di, Instruction::NORON, &[])?; // turn to normal mode
-        write_command(&mut di, Instruction::DISPON, &[])?; // turn on display
-                                                           // write_command(&mut di, Instruction::BRIGHTNESS, &[0x00])?; // turn on display
-
-        Ok(())
-    };
-    x().unwrap();
-
-    // DISPON requires some time otherwise we risk SPI data issues
-    delay::Ets.delay_us(120_000).unwrap();
+    let di = SPIInterface::new(spi, dc.into_output()?, cs);
 
     let mut display = mipidsi::Display::ili9486_rgb666(di, reset);
+    display.init(&mut delay::Ets).unwrap();
 
     display
         .set_orientation(mipidsi::Orientation::Landscape, true, false)
