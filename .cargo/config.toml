@@ -23,7 +23,7 @@ rustflags = ["-C", "default-linker-libraries"]
 
 [unstable]
 build-std = ["std", "panic_abort"]
-build-std-features = ["panic_immediate_abort"]
+#build-std-features = ["panic_immediate_abort"]
 
 [env]
 # Uncomment this and use the esp-idf-sys "native" build feature (`cargo build --features native`) to build against ESP-IDF 5.0 (master)
