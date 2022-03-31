@@ -665,8 +665,25 @@ dependencies = [
  "serde",
  "serde_json",
  "strum",
- "strum_macros",
  "url",
+]
+
+[[package]]
+name = "embedded-svc"
+version = "0.19.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8603979045a1115fe74827ab64ac3bb8fc37e8937c01cd47150a6d5b8de61244"
+dependencies = [
+ "anyhow",
+ "enumset",
+ "http-auth-basic",
+ "log",
+ "no-std-net",
+ "num_enum",
+ "serde",
+ "serde_json",
+ "strum",
+ "strum_macros",
 ]
 
 [[package]]
@@ -754,7 +771,7 @@ dependencies = [
  "anyhow",
  "embedded-hal 0.2.7",
  "embedded-hal 1.0.0-alpha.7",
- "embedded-svc",
+ "embedded-svc 0.17.5",
  "embuild",
  "esp-idf-sys",
  "nb 0.1.3",
@@ -768,7 +785,7 @@ checksum = "5bf71ca7bf5cd45a72d4727a893e6fa7395c2bab7745c0b4297430a337308ddc"
 dependencies = [
  "anyhow",
  "cstr_core",
- "embedded-svc",
+ "embedded-svc 0.17.5",
  "embuild",
  "enumset",
  "esp-idf-hal",
@@ -1484,7 +1501,7 @@ dependencies = [
  "embedded-graphics",
  "embedded-graphics-framebuf",
  "embedded-hal 1.0.0-alpha.7",
- "embedded-svc",
+ "embedded-svc 0.19.0",
  "embuild",
  "esp-idf-hal",
  "esp-idf-svc",
