@@ -2141,9 +2141,9 @@ checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
 
 [[package]]
 name = "ws2812-esp32-rmt-driver"
-version = "0.2.2"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f22c61ba363be6d65c18f69520c70f92506aa4b530e78a1fa45e59dacb0c822e"
+checksum = "5c57c3c2bb3b4133696ffd87db36a278d80374f9109a0222198e2c2be6615a85"
 dependencies = [
  "anyhow",
  "embedded-graphics-core",
