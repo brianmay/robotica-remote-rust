@@ -68,11 +68,16 @@ pub(crate) fn connect(
                 let x = touch_screen.get_touch_event().unwrap();
                 // println!("get_touch_event: {x:?}");
 
-                let button_id = if let Some(p1) = x.p1 {
-                    let p1 = translate(p1);
-                    get_button_for_point(&buttons, p1).map(|button| button.id)
-                } else {
-                    Some(ButtonId::NotAButton)
+                let button_id = match x.p1 {
+                    Some(p1) => {
+                        let p1 = translate(p1);
+                        let button = get_button_for_point(&buttons, p1);
+                        match button {
+                            Some(button) => Some(button.id),
+                            None => Some(ButtonId::NotAButton),
+                        }
+                    }
+                    None => None,
                 };
 
                 let (do_release, do_press) = match (pressed, button_id) {
