@@ -23,7 +23,7 @@ embedded-graphics-core = { git = "https://github.com/embedded-graphics/embedded-
 opt-level = "s"
 
 [profile.dev]
-debug = true # Symbols are nice and they don't increase the size on Flash
+debug = true    # Symbols are nice and they don't increase the size on Flash
 opt-level = "z"
 
 [features]
@@ -36,7 +36,7 @@ makerfab = ["display-interface", "display-interface-spi", "mipidsi", "ft6x36"]
 robotica = ["smart-leds", "smart-leds-trait", "ws2812-esp32-rmt-driver"]
 
 [dependencies]
-anyhow = {version = "1", features = ["backtrace"]}
+anyhow = { version = "1", features = ["backtrace"] }
 log = "0.4"
 url = "2"
 esp-idf-sys = { version = "0.30.6", features = ["binstart"] }
@@ -49,12 +49,12 @@ display-interface = { version = "0.4", optional = true }
 display-interface-spi = { version = "0.4", optional = true }
 # st7789 = "0.6"
 # ili9341 = { version = "0.5", path = "/home/brian/tmp/ili9341-rs", optional = true }
-mipidsi = { version = "0.1.0", git = "https://github.com/brianmay/mipidsi", branch = "hacks", optional = true}
-# mipidsi = { version = "0.1.0", path = "/home/brian/tmp/mipidsi", optional = true}
-ssd1306 = {version = "0.7", optional = true}
+mipidsi = { version = "0.1.0", git = "https://github.com/brianmay/mipidsi", branch = "hacks", optional = true }
+# mipidsi = { version = "0.1.0", path = "/home/brian/tmp/mipidsi", optional = true }
+ssd1306 = { version = "0.7", optional = true }
 # epd-waveshare = "0.5.0"
 smol = "1.2"
-shared-bus = {version = "0.2.3", optional = true}
+shared-bus = { version = "0.2.3", optional = true }
 serde_json = "1.0"
 tinytga = "0.4.1"
 pretty_env_logger = "0.4.0"
@@ -63,7 +63,7 @@ smart-leds = { version = "0.3.0", optional = true }
 smart-leds-trait = { version = "0", optional = true }
 ws2812-esp32-rmt-driver = { version = "0.3.0", optional = true }
 hex = "0.4.3"
-ft6x36 = { version = "0.1.0", git = "https://github.com/pyaillet/ft6x36-rs", branch="main", optional = true }
+ft6x36 = { version = "0.1.0", git = "https://github.com/pyaillet/ft6x36-rs", branch = "main", optional = true }
 embedded-graphics-framebuf = "0.1.0"
 
 [build-dependencies]
