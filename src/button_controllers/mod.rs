@@ -62,8 +62,7 @@ pub enum Icon {
 #[derive(Clone)]
 pub struct CommonConfig {
     pub name: String,
-    pub location: String,
-    pub device: String,
+    pub topic_substr: String,
     pub action: Action,
     pub icon: Icon,
 }

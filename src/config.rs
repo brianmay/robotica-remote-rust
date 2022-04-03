@@ -15,8 +15,7 @@ pub fn get_controllers_config() -> [Box<dyn Config>; NUM_CONTROLLERS] {
         Box::new(LightConfig {
             c: CommonConfig {
                 name: "Brian Light".to_string(),
-                location: "Brian".to_string(),
-                device: "Light".to_string(),
+                topic_substr: "Brian/Light".to_string(),
                 action: Action::Toggle,
                 icon: Icon::Light,
             },
@@ -26,8 +25,7 @@ pub fn get_controllers_config() -> [Box<dyn Config>; NUM_CONTROLLERS] {
         Box::new(SwitchConfig {
             c: CommonConfig {
                 name: "Brian Fan".to_string(),
-                location: "Brian".to_string(),
-                device: "Fan".to_string(),
+                topic_substr: "Brian/Fan".to_string(),
                 action: Action::Toggle,
                 icon: Icon::Fan,
             },
@@ -35,8 +33,7 @@ pub fn get_controllers_config() -> [Box<dyn Config>; NUM_CONTROLLERS] {
         Box::new(LightConfig {
             c: CommonConfig {
                 name: "Passage".to_string(),
-                location: "Passage".to_string(),
-                device: "Light".to_string(),
+                topic_substr: "Passage/Light".to_string(),
                 action: Action::Toggle,
                 icon: Icon::Light,
             },
@@ -46,8 +43,7 @@ pub fn get_controllers_config() -> [Box<dyn Config>; NUM_CONTROLLERS] {
         Box::new(MusicConfig {
             c: CommonConfig {
                 name: "Brian Wake-Up".to_string(),
-                location: "Brian".to_string(),
-                device: "Robotica".to_string(),
+                topic_substr: "Brian/Robotica".to_string(),
                 action: Action::Toggle,
                 icon: Icon::WakeUp,
             },
@@ -56,8 +52,7 @@ pub fn get_controllers_config() -> [Box<dyn Config>; NUM_CONTROLLERS] {
         Box::new(SwitchConfig {
             c: CommonConfig {
                 name: "TV".to_string(),
-                location: "Dining".to_string(),
-                device: "TvSwitch".to_string(),
+                topic_substr: "Dining/TvSwitch".to_string(),
                 action: Action::Toggle,
                 icon: Icon::TV,
             },

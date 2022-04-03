@@ -35,7 +35,7 @@ impl Controller for MusicController {
         let mut result: Vec<Subscription> = Vec::new();
         let config = &self.config;
 
-        let p = ["state", &config.c.location, &config.c.device, "play_list"];
+        let p = ["state", &config.c.topic_substr, "play_list"];
         let s = Subscription {
             topic: topic(&p),
             label: ButtonStateMsgType::PlayList as u32,
@@ -91,10 +91,7 @@ impl Controller for MusicController {
             })
         };
 
-        let topic = format!(
-            "command/{}/{}",
-            self.config.c.location, self.config.c.device
-        );
+        let topic = format!("command/{}", self.config.c.topic_substr);
         let command = Command { topic, message };
 
         vec![command]

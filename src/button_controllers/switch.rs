@@ -34,7 +34,7 @@ impl Controller for SwitchController {
         let mut result: Vec<Subscription> = Vec::new();
         let config = &self.config;
 
-        let p = ["state", &config.c.location, &config.c.device, "power"];
+        let p = ["state", &config.c.topic_substr, "power"];
         let s = Subscription {
             topic: topic(&p),
             label: ButtonStateMsgType::Power as u32,
@@ -87,10 +87,7 @@ impl Controller for SwitchController {
             }
         };
 
-        let topic = format!(
-            "command/{}/{}",
-            self.config.c.location, self.config.c.device
-        );
+        let topic = format!("command/{}", self.config.c.topic_substr);
         let command = Command { topic, message };
 
         vec![command]

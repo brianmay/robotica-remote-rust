@@ -40,21 +40,21 @@ impl Controller for LightController {
         let mut result: Vec<Subscription> = Vec::new();
         let config = &self.config;
 
-        let p = ["state", &config.c.location, &config.c.device, "power"];
+        let p = ["state", &config.c.topic_substr, "power"];
         let s = Subscription {
             topic: topic(&p),
             label: ButtonStateMsgType::Power as u32,
         };
         result.push(s);
 
-        let p = ["state", &config.c.location, &config.c.device, "scenes"];
+        let p = ["state", &config.c.topic_substr, "scenes"];
         let s = Subscription {
             topic: topic(&p),
             label: ButtonStateMsgType::Scenes as u32,
         };
         result.push(s);
 
-        let p = ["state", &config.c.location, &config.c.device, "priorities"];
+        let p = ["state", &config.c.topic_substr, "priorities"];
         let s = Subscription {
             topic: topic(&p),
             label: ButtonStateMsgType::Priorities as u32,
@@ -115,10 +115,7 @@ impl Controller for LightController {
             }
         };
 
-        let topic = format!(
-            "command/{}/{}",
-            self.config.c.location, self.config.c.device
-        );
+        let topic = format!("command/{}", self.config.c.topic_substr);
         let command = Command { topic, message };
 
         vec![command]
