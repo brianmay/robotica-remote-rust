@@ -10,14 +10,13 @@ use log::*;
 type Label = u32;
 
 pub struct Command {
-    location: String,
-    device: String,
+    topic: String,
     message: serde_json::Value,
 }
 
 impl Command {
-    pub fn get_topic(&self) -> String {
-        format!("command/{}/{}", self.location, self.device)
+    pub fn get_topic(&self) -> &str {
+        &self.topic
     }
 
     pub fn get_message(&self) -> String {

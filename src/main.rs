@@ -167,7 +167,7 @@ fn button_press(
             let topic = command.get_topic();
             let data = command.get_message();
             info!("Send {}: {}", topic, data);
-            mqtt.publish(&topic, false, &data);
+            mqtt.publish(topic, false, &data);
         }
     } else {
         error!("Controller for button {} does not exist", id);

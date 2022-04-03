@@ -115,11 +115,11 @@ impl Controller for LightController {
             }
         };
 
-        let command = Command {
-            location: self.config.c.location.clone(),
-            device: self.config.c.device.clone(),
-            message,
-        };
+        let topic = format!(
+            "command/{}/{}",
+            self.config.c.location, self.config.c.device
+        );
+        let command = Command { topic, message };
 
         vec![command]
     }
