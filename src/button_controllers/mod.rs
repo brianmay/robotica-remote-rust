@@ -34,7 +34,6 @@ pub enum Action {
 
 pub struct Subscription {
     pub topic: String,
-    // pub msg_type: MessageType,
     pub label: Label,
 }
 
