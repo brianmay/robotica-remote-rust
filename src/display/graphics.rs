@@ -44,7 +44,6 @@ pub fn display_thread<D, const NUM_PER_PAGE: usize, const NUM_DISPLAYS: usize>(
     D::Error: std::fmt::Debug,
 {
     let mut states: Vec<Option<State>> = vec![None; NUM_PER_PAGE];
-    let mut selected_page_number: usize = 0;
 
     for display in displays.iter_mut() {
         display.set_display_on(true).unwrap();
@@ -93,8 +92,7 @@ pub fn display_thread<D, const NUM_PER_PAGE: usize, const NUM_DISPLAYS: usize>(
                 }
                 // update_components = [true; NUM_PER_PAGE];
             }
-            DisplayCommand::ShowPage(page_num) => {
-                selected_page_number = page_num;
+            DisplayCommand::ShowPage(_page_num) => {
                 update_components = [false; NUM_PER_PAGE];
             }
             DisplayCommand::ButtonPressed(id) => {
@@ -114,7 +112,7 @@ pub fn display_thread<D, const NUM_PER_PAGE: usize, const NUM_DISPLAYS: usize>(
         for (id, component) in components.iter().enumerate() {
             let state = &states[id];
             if update_components[id] {
-                component.draw(displays, state, selected_page_number);
+                component.draw(displays, state);
             }
         }
 
@@ -140,7 +138,7 @@ impl Button {
         }
     }
 
-    fn draw<D>(&self, displays: &mut [D], state: &Option<State>, page_num: usize)
+    fn draw<D>(&self, displays: &mut [D], state: &Option<State>)
     where
         D: FlushableDrawTarget,
         D::Color: PixelColor + From<Gray8> + From<Rgb555> + From<Rgb888>,
@@ -153,7 +151,7 @@ impl Button {
             top_left: Point::zero(),
             size: Size::new(128, 64),
         };
-        page_draw(&mut fbuff, state, page_num, &bounding_box);
+        page_draw(&mut fbuff, state, &bounding_box);
 
         let display = &mut displays[self.display];
 
@@ -167,12 +165,8 @@ impl Button {
     }
 }
 
-fn page_draw<D>(
-    display: &mut D,
-    state_or_none: &Option<State>,
-    number: usize,
-    bounding_box: &Rectangle,
-) where
+fn page_draw<D>(display: &mut D, state_or_none: &Option<State>, bounding_box: &Rectangle)
+where
     D: DrawTarget,
     D::Color: PixelColor + From<Gray8> + From<Rgb555> + From<Rgb888>,
     D::Error: std::fmt::Debug,
@@ -189,8 +183,6 @@ fn page_draw<D>(
             led_draw_pressed(display, bounding_box);
         }
     }
-
-    led_draw_number(display, number, bounding_box);
 }
 
 fn led_clear<D>(display: &mut D, bounding_box: &Rectangle)
@@ -249,23 +241,6 @@ where
         )
         .draw(display)
         .unwrap();
-}
-
-fn led_draw_number<D>(display: &mut D, number: usize, bounding_box: &Rectangle)
-where
-    D: DrawTarget,
-    D::Color: From<Rgb555>,
-    D::Error: std::fmt::Debug,
-{
-    let t = format!("{}", number);
-
-    Text::new(
-        &t,
-        Point::new(bounding_box.top_left.x + 2, bounding_box.top_left.y + 14),
-        MonoTextStyle::new(&FONT_10X20, Rgb555::WHITE.into()),
-    )
-    .draw(display)
-    .unwrap();
 }
 
 fn led_draw_name<D>(display: &mut D, name: &str, bounding_box: &Rectangle)
