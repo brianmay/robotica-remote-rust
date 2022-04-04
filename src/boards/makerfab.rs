@@ -56,28 +56,44 @@ pub fn configure_devices(tx: mpsc::Sender<messages::Message>) -> Result<Makerfab
             id: ButtonId::Physical(1),
         },
         ButtonInfo {
-            position: Rectangle::new(Point::new(10, 64 + 20), Size::new(128, 64)),
+            position: Rectangle::new(Point::new(256 + 30, 10), Size::new(128, 64)),
             id: ButtonId::Physical(2),
         },
         ButtonInfo {
-            position: Rectangle::new(Point::new(128 + 20, 64 + 20), Size::new(128, 64)),
+            position: Rectangle::new(Point::new(10, 64 + 20), Size::new(128, 64)),
             id: ButtonId::Physical(3),
         },
         ButtonInfo {
-            position: Rectangle::new(Point::new(10, 64 * 2 + 30), Size::new(128, 64)),
+            position: Rectangle::new(Point::new(128 + 20, 64 + 20), Size::new(128, 64)),
             id: ButtonId::Physical(4),
         },
         ButtonInfo {
-            position: Rectangle::new(Point::new(128 + 20, 64 * 2 + 30), Size::new(128, 64)),
+            position: Rectangle::new(Point::new(256 + 30, 64 + 20), Size::new(128, 64)),
             id: ButtonId::Physical(5),
         },
         ButtonInfo {
-            position: Rectangle::new(Point::new(10, 64 * 3 + 40), Size::new(128, 64)),
+            position: Rectangle::new(Point::new(10, 64 * 2 + 30), Size::new(128, 64)),
             id: ButtonId::Physical(6),
         },
         ButtonInfo {
-            position: Rectangle::new(Point::new(128 + 20, 64 * 3 + 40), Size::new(128, 64)),
+            position: Rectangle::new(Point::new(128 + 20, 64 * 2 + 30), Size::new(128, 64)),
             id: ButtonId::Physical(7),
+        },
+        ButtonInfo {
+            position: Rectangle::new(Point::new(256 + 30, 64 * 2 + 30), Size::new(128, 64)),
+            id: ButtonId::Physical(8),
+        },
+        ButtonInfo {
+            position: Rectangle::new(Point::new(10, 64 * 3 + 40), Size::new(128, 64)),
+            id: ButtonId::Physical(9),
+        },
+        ButtonInfo {
+            position: Rectangle::new(Point::new(128 + 20, 64 * 3 + 40), Size::new(128, 64)),
+            id: ButtonId::Physical(10),
+        },
+        ButtonInfo {
+            position: Rectangle::new(Point::new(256 + 30, 64 * 3 + 40), Size::new(128, 64)),
+            id: ButtonId::Physical(11),
         },
     ];
 

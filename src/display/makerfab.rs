@@ -29,7 +29,7 @@ use mipidsi::models::ILI9486Rgb666;
 use std::sync::mpsc;
 use std::thread;
 
-pub const NUM_PER_PAGE: usize = 8;
+pub const NUM_PER_PAGE: usize = 12;
 pub const NUM_DISPLAYS: usize = 1;
 
 type SpiInterface = SPIInterface<
@@ -151,6 +151,10 @@ pub fn connect(
         Button::new(0, buttons[5].position),
         Button::new(0, buttons[6].position),
         Button::new(0, buttons[7].position),
+        Button::new(0, buttons[8].position),
+        Button::new(0, buttons[9].position),
+        Button::new(0, buttons[10].position),
+        Button::new(0, buttons[11].position),
     ];
 
     let builder = thread::Builder::new().stack_size(8 * 1024);
