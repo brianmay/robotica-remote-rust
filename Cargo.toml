@@ -40,7 +40,7 @@ anyhow = { version = "1", features = ["backtrace"] }
 log = "0.4"
 url = "2"
 esp-idf-sys = { version = "0.31.0", features = ["binstart"] }
-esp-idf-svc = "=0.39.1"
+esp-idf-svc = { version = "0.39.1", features = ["experimental"] }
 esp-idf-hal = "0.35.2"
 embedded-svc = "0.19.1"
 embedded-hal = "=1.0.0-alpha.7"

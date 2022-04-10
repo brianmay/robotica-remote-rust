@@ -5,52 +5,18 @@ use std::time::Duration;
 use arr_macro::arr;
 use embedded_svc::event_bus::EventBus;
 use embedded_svc::event_bus::Postbox;
-use log::*;
 
 use esp_idf_hal::gpio::Pin;
-use esp_idf_svc::eventloop::{
-    EspBackgroundEventLoop, EspBackgroundSubscription, EspEventFetchData, EspEventPostData,
-    EspTypedEventDeserializer, EspTypedEventSerializer, EspTypedEventSource,
-};
-use esp_idf_sys::{
-    c_types::{self, c_void},
-    gpio_int_type_t_GPIO_INTR_ANYEDGE,
-};
+use esp_idf_svc::notify::{Background, BackgroundNotifyConfiguration, EspNotify, EspSubscription};
+use esp_idf_sys::{c_types::c_void, gpio_int_type_t_GPIO_INTR_ANYEDGE};
 
 use super::super::*;
 
 const NUM_PINS: usize = 40;
 
-#[derive(Copy, Clone, Debug)]
-struct EventLoopMessage(i32, Value);
-
-impl EspTypedEventSource for EventLoopMessage {
-    fn source() -> *const c_types::c_char {
-        b"GPIO-SERVICE\0".as_ptr() as *const _
-    }
-}
-impl EspTypedEventSerializer<EventLoopMessage> for EventLoopMessage {
-    fn serialize<R>(
-        event: &EventLoopMessage,
-        f: impl for<'a> FnOnce(&'a EspEventPostData) -> R,
-    ) -> R {
-        f(&unsafe { EspEventPostData::new(Self::source(), Self::event_id(), event) })
-    }
-}
-
-impl EspTypedEventDeserializer<EventLoopMessage> for EventLoopMessage {
-    fn deserialize<R>(
-        data: &EspEventFetchData,
-        f: &mut impl for<'a> FnMut(&'a EventLoopMessage) -> R,
-    ) -> R {
-        f(unsafe { data.as_payload() })
-    }
-}
-
 static mut INITIALIZED: AtomicBool = AtomicBool::new(false);
-static mut EVENT_LOOP: Option<EspBackgroundEventLoop> = None;
-static mut SUBSCRIPTION: Option<EspBackgroundSubscription> = None;
-static mut CALLBACKS: [Option<InputNotifyCallback>; NUM_PINS] = arr![None; 40];
+static mut NOTIFY: [Option<EspNotify<Background>>; NUM_PINS] = arr![None; 40];
+static mut SUBSCRIPTION: [Option<EspSubscription>; NUM_PINS] = arr![None; 40];
 
 impl<T: 'static + Pin + InputPin + Send> InputPinNotify for T {
     fn subscribe<F: Fn(Value) + Send + 'static>(&self, callback: F) {
@@ -61,8 +27,23 @@ impl<T: 'static + Pin + InputPin + Send> InputPinNotify for T {
             unsafe { INITIALIZED.store(true, Ordering::SeqCst) };
         }
 
+        let config = BackgroundNotifyConfiguration::default();
+        let mut notify = EspNotify::new(&config).unwrap();
+
+        let s = notify
+            .subscribe(move |v| {
+                let v: Value = if *v != 0 { Value::High } else { Value::Low };
+                // let callback = unsafe { &CALLBACKS[pin_number as usize] };
+                // if let Some(callback) = callback {
+                println!("xxxxx {:?}", v);
+                callback(v);
+                // }
+            })
+            .unwrap();
+
         unsafe {
-            CALLBACKS[pin_number as usize] = Some(Box::new(callback));
+            NOTIFY[pin_number as usize] = Some(notify);
+            SUBSCRIPTION[pin_number as usize] = Some(s);
         }
 
         let state_ptr: *mut c_void = pin_number as *mut c_void;
@@ -76,32 +57,8 @@ impl<T: 'static + Pin + InputPin + Send> InputPinNotify for T {
 }
 
 fn initialize() {
-    info!("About to start a background event loop");
-    let mut event_loop = EspBackgroundEventLoop::new(&Default::default()).unwrap();
-    info!("About to subscribe to the background event loop");
-    let subscription = event_loop
-        .subscribe(move |message: &EventLoopMessage| {
-            let pin_number = message.0;
-            let value = message.1;
-            info!(
-                "Got message from the event loop: {} {:?} ",
-                pin_number, value
-            );
-            let callback = unsafe { &CALLBACKS[pin_number as usize] };
-            if let Some(callback) = callback {
-                callback(value);
-            }
-            info!("returned from callback");
-        })
-        .unwrap();
-
     unsafe {
         esp_idf_sys::gpio_install_isr_service(0);
-    }
-
-    unsafe {
-        EVENT_LOOP = Some(event_loop);
-        SUBSCRIPTION = Some(subscription);
     }
 }
 
@@ -109,18 +66,16 @@ fn initialize() {
 #[inline(never)]
 extern "C" fn gpio_handler(data: *mut c_void) {
     let pin_number = data as i32;
-    let value = unsafe { esp_idf_sys::gpio_get_level(pin_number) };
-    let value = if value != 0 { Value::High } else { Value::Low };
+    let value = unsafe { esp_idf_sys::gpio_get_level(pin_number) } as u32;
 
     unsafe {
-        match &mut EVENT_LOOP {
-            Some(x) => {
-                x.post(
-                    &EventLoopMessage(pin_number, value),
-                    Some(Duration::from_secs(0)),
-                )
-                .unwrap();
+        let notify = NOTIFY.get_mut(pin_number as usize);
+
+        match notify {
+            Some(Some(x)) => {
+                x.post(&value, Some(Duration::from_secs(0))).unwrap();
             }
+            Some(None) => {}
             None => {}
         }
     }
