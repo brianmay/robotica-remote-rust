@@ -33,11 +33,7 @@ impl<T: 'static + Pin + InputPin + Send> InputPinNotify for T {
         let s = notify
             .subscribe(move |v| {
                 let v: Value = if *v != 0 { Value::High } else { Value::Low };
-                // let callback = unsafe { &CALLBACKS[pin_number as usize] };
-                // if let Some(callback) = callback {
-                println!("xxxxx {:?}", v);
                 callback(v);
-                // }
             })
             .unwrap();
 
