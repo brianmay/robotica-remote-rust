@@ -26,6 +26,9 @@ use esp_idf_hal::spi::Master;
 use esp_idf_hal::spi::SPI2;
 use log::info;
 use mipidsi::models::ILI9486Rgb666;
+use mipidsi::ColorOrder;
+use mipidsi::DisplayOptions;
+use mipidsi::Orientation;
 use std::sync::mpsc;
 use std::thread;
 
@@ -131,11 +134,14 @@ pub fn connect(
     let di = SPIInterface::new(spi, dc.into_output()?, cs);
 
     let mut display = mipidsi::Display::ili9486_rgb666(di, reset);
-    display.init(&mut delay::Ets).unwrap();
-
-    display
-        .set_orientation(mipidsi::Orientation::Landscape, true, false)
-        .unwrap();
+    let options = DisplayOptions {
+        orientation: Orientation::Landscape(false),
+        invert_vertical_refresh: false,
+        color_order: ColorOrder::Bgr,
+        invert_horizontal_refresh: false,
+    };
+    display.init(&mut delay::Ets, options).unwrap();
+    display.set_orientation(options.orientation).unwrap();
 
     let display = Display(display, bl);
 

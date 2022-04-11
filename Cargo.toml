@@ -49,7 +49,7 @@ display-interface = { version = "0.4", optional = true }
 display-interface-spi = { version = "0.4", optional = true }
 # st7789 = "0.6"
 # ili9341 = { version = "0.5", path = "/home/brian/tmp/ili9341-rs", optional = true }
-mipidsi = { version = "0.1.0", git = "https://github.com/brianmay/mipidsi", branch = "hacks", optional = true }
+mipidsi = { version = "0.1.0", git = "https://github.com/almindor/mipidsi.git", branch = "colorswap", optional = true }
 # mipidsi = { version = "0.1.0", path = "/home/brian/tmp/mipidsi", optional = true }
 ssd1306 = { version = "0.7", optional = true }
 # epd-waveshare = "0.5.0"
