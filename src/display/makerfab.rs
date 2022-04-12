@@ -141,7 +141,6 @@ pub fn connect(
         invert_horizontal_refresh: false,
     };
     display.init(&mut delay::Ets, options).unwrap();
-    display.set_orientation(options.orientation).unwrap();
 
     let display = Display(display, bl);
 
