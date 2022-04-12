@@ -149,6 +149,7 @@ impl Mqtt {
                     }
 
                     MqttCommand::Publish(topic, retain, data) => {
+                        debug!("Publishing {} {}", topic, data);
                         client
                             .publish(topic, QoS::AtMostOnce, retain, data.as_bytes())
                             .unwrap();
