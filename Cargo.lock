@@ -1134,7 +1134,7 @@ dependencies = [
 [[package]]
 name = "mipidsi"
 version = "0.1.0"
-source = "git+https://github.com/almindor/mipidsi.git?branch=colorswap#96fcc2058bc382c9bde82dac491b0e136ec022ef"
+source = "git+https://github.com/almindor/mipidsi.git?branch=colorswap#d67174bf865ccd630ae1acb6b4d02338c754f6fe"
 dependencies = [
  "display-interface",
  "embedded-graphics-core",
