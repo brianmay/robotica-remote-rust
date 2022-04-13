@@ -31,9 +31,18 @@ default = ["native", "lca2021_badge"]
 
 # Enable this feature for the build to use ESP-IDF native tooling instead of PlatformIO under the hood
 native = ["esp-idf-sys/native"]
-lca2021_badge = ["shared-bus", "ssd1306"]
-makerfab = ["display-interface", "display-interface-spi", "mipidsi", "ft6x36"]
-robotica = ["smart-leds", "smart-leds-trait", "ws2812-esp32-rmt-driver"]
+lca2021_badge = ["dep:shared-bus", "dep:ssd1306"]
+makerfab = [
+    "dep:display-interface",
+    "dep:display-interface-spi",
+    "dep:mipidsi",
+    "dep:ft6x36",
+]
+robotica = [
+    "dep:smart-leds",
+    "dep:smart-leds-trait",
+    "dep:ws2812-esp32-rmt-driver",
+]
 
 [dependencies]
 anyhow = { version = "1", features = ["backtrace"] }
