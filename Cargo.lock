@@ -604,18 +604,18 @@ dependencies = [
 
 [[package]]
 name = "embedded-hal"
-version = "1.0.0-alpha.7"
+version = "1.0.0-alpha.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "93cc714edeae73aa1ff259af4498595360b2992e0e9c59801873ed198a7f2216"
+checksum = "c3babfc7fd332142a0b11aebf592992f211f4e01b6222fb04b03aba1bd80018d"
 dependencies = [
  "nb 1.0.0",
 ]
 
 [[package]]
 name = "embedded-svc"
-version = "0.19.1"
+version = "0.20.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aeac0cf436604eced307910b6676bac59f328c07875b8f8d7c65bc5ecee9dbf4"
+checksum = "d0a3de276c11e6a11fe2782b597ac31978e2c4f07301e76aa6e46eafe1ec81b7"
 dependencies = [
  "anyhow",
  "enumset",
@@ -706,13 +706,13 @@ dependencies = [
 
 [[package]]
 name = "esp-idf-hal"
-version = "0.35.2"
+version = "0.36.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "40f59cc50641b0d21ce4ce05650cb768a134677f3043917f62ae7c774c3d9548"
+checksum = "4df6f7e60bdb5b5bebdcb812da3a25bf6efe38a102c3c68579c122b1998bcc2e"
 dependencies = [
  "anyhow",
  "embedded-hal 0.2.7",
- "embedded-hal 1.0.0-alpha.7",
+ "embedded-hal 1.0.0-alpha.8",
  "embedded-svc",
  "embuild",
  "esp-idf-sys",
@@ -721,9 +721,9 @@ dependencies = [
 
 [[package]]
 name = "esp-idf-svc"
-version = "0.39.2"
+version = "0.40.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a6b686b3a4f6f1044751501a5b98b6b1386d0f9802e32c17b17603126ba288b8"
+checksum = "dede229f4d8dd24f80e0767bf1b389d2eafd589f4a09bfe77aea7afb1f4c6cfe"
 dependencies = [
  "anyhow",
  "cstr_core",
@@ -1464,7 +1464,7 @@ dependencies = [
  "display-interface-spi",
  "embedded-graphics",
  "embedded-graphics-framebuf",
- "embedded-hal 1.0.0-alpha.7",
+ "embedded-hal 1.0.0-alpha.8",
  "embedded-svc",
  "embuild",
  "esp-idf-hal",

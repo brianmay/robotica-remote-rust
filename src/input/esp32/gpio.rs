@@ -7,7 +7,7 @@ use embedded_svc::event_bus::EventBus;
 use embedded_svc::event_bus::Postbox;
 
 use esp_idf_hal::gpio::Pin;
-use esp_idf_svc::notify::{Background, BackgroundNotifyConfiguration, EspNotify, EspSubscription};
+use esp_idf_svc::notify::{Configuration, EspNotify, EspSubscription};
 use esp_idf_sys::{c_types::c_void, gpio_int_type_t_GPIO_INTR_ANYEDGE};
 
 use super::super::*;
@@ -15,7 +15,7 @@ use super::super::*;
 const NUM_PINS: usize = 40;
 
 static mut INITIALIZED: AtomicBool = AtomicBool::new(false);
-static mut NOTIFY: [Option<EspNotify<Background>>; NUM_PINS] = arr![None; 40];
+static mut NOTIFY: [Option<EspNotify>; NUM_PINS] = arr![None; 40];
 static mut SUBSCRIPTION: [Option<EspSubscription>; NUM_PINS] = arr![None; 40];
 
 impl<T: 'static + Pin + InputPin + Send> InputPinNotify for T {
@@ -27,7 +27,7 @@ impl<T: 'static + Pin + InputPin + Send> InputPinNotify for T {
             unsafe { INITIALIZED.store(true, Ordering::SeqCst) };
         }
 
-        let config = BackgroundNotifyConfiguration::default();
+        let config = Configuration::default();
         let mut notify = EspNotify::new(&config).unwrap();
 
         let s = notify

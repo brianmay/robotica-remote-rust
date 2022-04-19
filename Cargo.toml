@@ -49,10 +49,10 @@ anyhow = { version = "1", features = ["backtrace"] }
 log = "0.4"
 url = "2"
 esp-idf-sys = { version = "0.31.0", features = ["binstart"] }
-esp-idf-svc = { version = "0.39.2", features = ["experimental"] }
-esp-idf-hal = "0.35.2"
-embedded-svc = "0.19.1"
-embedded-hal = "=1.0.0-alpha.7"
+esp-idf-svc = { version = "0.40.0", features = ["experimental"] }
+esp-idf-hal = { version = "0.36.0" }
+embedded-svc = "0.20.3"
+embedded-hal = "=1.0.0-alpha.8"
 embedded-graphics = "0.7.1"
 display-interface = { version = "0.4", optional = true }
 display-interface-spi = { version = "0.4", optional = true }
