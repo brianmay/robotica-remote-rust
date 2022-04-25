@@ -1,10 +1,12 @@
 // Adapted from https://github.com/iamabetterdogtht/esp32-touch-sensor-example/blob/a45cd34c43963305bd84fd7dbc31414a5e4c41f4/src/touch.rs
 
+use esp_idf_svc::notify::Configuration;
+use esp_idf_svc::notify::EspNotify;
+use esp_idf_svc::notify::EspSubscription;
 use std::ffi::c_void;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::time::Duration;
-use sys::c_types;
 
 use arr_macro::arr;
 
@@ -12,10 +14,6 @@ use log::*;
 
 use anyhow::Result;
 use esp_idf_hal::gpio;
-use esp_idf_svc::eventloop::{
-    EspBackgroundEventLoop, EspBackgroundSubscription, EspEventFetchData, EspEventPostData,
-    EspTypedEventDeserializer, EspTypedEventSerializer, EspTypedEventSource,
-};
 use esp_idf_sys as sys;
 use esp_idf_sys::esp;
 
@@ -25,7 +23,7 @@ use embedded_hal::digital::ErrorType;
 use embedded_svc::event_bus::EventBus;
 use embedded_svc::event_bus::Postbox;
 
-use crate::input::{InputNotifyCallback, InputPinNotify, Value};
+use crate::input::{InputPinNotify, Value};
 
 const NUM_TOUCH_PINS: usize = 10;
 
@@ -73,19 +71,15 @@ impl TouchControllerBuilder {
 #[inline(never)]
 // #[link_section = ".iram1"]
 unsafe extern "C" fn touch_handler(data: *mut c_void) {
-    let pin_number = data as i32;
+    let _pin_number = data as i32;
 
     let pad_intr = sys::touch_pad_get_status();
     if esp!(sys::touch_pad_clear_status()).is_ok() {
-        for (channel, _) in CALLBACKS.iter().enumerate() {
+        for (channel, notify) in NOTIFY.iter_mut().enumerate() {
             if (pad_intr >> channel) & 1 == 1 {
-                match &mut EVENT_LOOP {
+                match notify {
                     Some(x) => {
-                        x.post(
-                            &EventLoopMessage(pin_number, channel as sys::touch_pad_t, Value::Low),
-                            Some(Duration::from_secs(0)),
-                        )
-                        .unwrap();
+                        x.post(&1, Some(Duration::from_secs(0))).unwrap();
                     }
                     None => {}
                 }
@@ -126,14 +120,22 @@ impl InputPinNotify for TouchPin {
             unsafe { INITIALIZED.store(true, Ordering::SeqCst) };
         }
 
-        let pin_number = self.pin_number;
-        let channel = self.channel;
+        let config = Configuration::default();
+        let mut notify = EspNotify::new(&config).unwrap();
+
+        let s = notify
+            .subscribe(move |v| {
+                let v: Value = if *v != 0 { Value::High } else { Value::Low };
+                callback(v);
+            })
+            .unwrap();
 
         unsafe {
-            CALLBACKS[channel as usize] = Some(Box::new(callback));
+            NOTIFY[self.channel as usize] = Some(notify);
+            SUBSCRIPTION[self.channel as usize] = Some(s);
         }
 
-        let state_ptr: *mut c_void = pin_number as *mut c_void;
+        let state_ptr: *mut c_void = self.pin_number as *mut c_void;
         unsafe {
             esp!(sys::touch_pad_isr_register(Some(touch_handler), state_ptr)).unwrap();
         }
@@ -142,67 +144,14 @@ impl InputPinNotify for TouchPin {
 
 impl TouchPin {
     fn initialize(&self) {
-        let mut event_loop = EspBackgroundEventLoop::new(&Default::default()).unwrap();
-
-        info!("About to subscribe to the background touch event loop");
-        let subscription = event_loop
-            .subscribe(move |message: &EventLoopMessage| {
-                // let pin_number = message.0;
-                let channel = message.1;
-                let value = message.2;
-                // info!(
-                //     "Got message from the touch event loop: {} {} {:?}",
-                //     pin_number, channel, value
-                // );
-                let callback = unsafe { &CALLBACKS[channel as usize] };
-                if let Some(callback) = callback {
-                    callback(value);
-                }
-
-                // info!("returned from touch callback");
-            })
-            .unwrap();
-
         unsafe {
             esp!(sys::touch_pad_filter_start(10)).unwrap();
             esp!(sys::touch_pad_clear_status()).unwrap();
             esp!(sys::touch_pad_intr_enable()).unwrap();
         }
-
-        unsafe {
-            EVENT_LOOP = Some(event_loop);
-            SUBSCRIPTION = Some(subscription);
-        }
-    }
-}
-
-#[derive(Copy, Clone, Debug)]
-struct EventLoopMessage(i32, sys::touch_pad_t, Value);
-
-impl EspTypedEventSource for EventLoopMessage {
-    fn source() -> *const c_types::c_char {
-        b"TOUCH-SERVICE\0".as_ptr() as *const _
-    }
-}
-impl EspTypedEventSerializer<EventLoopMessage> for EventLoopMessage {
-    fn serialize<R>(
-        event: &EventLoopMessage,
-        f: impl for<'a> FnOnce(&'a EspEventPostData) -> R,
-    ) -> R {
-        f(&unsafe { EspEventPostData::new(Self::source(), Self::event_id(), event) })
-    }
-}
-
-impl EspTypedEventDeserializer<EventLoopMessage> for EventLoopMessage {
-    fn deserialize<R>(
-        data: &EspEventFetchData,
-        f: &mut impl for<'a> FnMut(&'a EventLoopMessage) -> R,
-    ) -> R {
-        f(unsafe { data.as_payload() })
     }
 }
 
 static mut INITIALIZED: AtomicBool = AtomicBool::new(false);
-static mut EVENT_LOOP: Option<EspBackgroundEventLoop> = None;
-static mut SUBSCRIPTION: Option<EspBackgroundSubscription> = None;
-static mut CALLBACKS: [Option<InputNotifyCallback>; NUM_TOUCH_PINS] = arr![None; 10];
+static mut NOTIFY: [Option<EspNotify>; NUM_TOUCH_PINS] = arr![None; 10];
+static mut SUBSCRIPTION: [Option<EspSubscription>; NUM_TOUCH_PINS] = arr![None; 10];
