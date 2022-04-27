@@ -1,5 +1,7 @@
 use std::{env, sync::Arc};
 
+use embedded_svc::ipv4;
+use embedded_svc::ipv4::DHCPClientSettings;
 use embedded_svc::wifi::*;
 
 use esp_idf_svc::netif::*;
@@ -12,6 +14,8 @@ use anyhow::bail;
 use anyhow::Result;
 
 use log::*;
+
+use crate::hardware::esp32::get_unique_id;
 
 const SSID: &str = env!("WIFI_SSID");
 const PASS: &str = env!("WIFI_PASS");
@@ -35,15 +39,20 @@ fn wifi(
     let mut wifi = EspWifi::new(netif_stack, sys_loop_stack, default_nvs)?;
 
     info!("Connecting to wifi");
+    let hostname = format!("robotica-remote_{}", get_unique_id());
+    let dhcp_conf = DHCPClientSettings {
+        hostname: Some(hostname),
+    };
 
+    let ip_conf = ipv4::ClientConfiguration::DHCP(dhcp_conf);
     wifi.set_configuration(&Configuration::Client(ClientConfiguration {
         ssid: SSID.into(),
         password: PASS.into(),
+        ip_conf: Some(ip_conf),
         ..Default::default()
     }))?;
 
     info!("Waiting for wifi");
-
     use ClientConnectionStatus::Connected;
     use ClientIpStatus::Done;
     use ClientStatus::Started;

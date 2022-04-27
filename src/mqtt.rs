@@ -7,11 +7,11 @@ use anyhow::Result;
 use embedded_svc::mqtt::client::{Client, Details, Event, Message, Publish, QoS};
 
 use esp_idf_svc::mqtt::client::{EspMqttClient, EspMqttMessage, MqttClientConfiguration};
-use esp_idf_sys::{esp_efuse_mac_get_default, EspError};
+use esp_idf_sys::EspError;
 
 use log::*;
 
-use crate::messages;
+use crate::{hardware::esp32::get_unique_id, messages};
 
 #[derive(Clone)]
 pub enum Label {
@@ -78,13 +78,7 @@ fn get_client(url: &str, tx: mpsc::Sender<MqttCommand>) -> Result<EspMqttClient,
         }
     };
 
-    let mut mac: [u8; 6] = [0; 6];
-    unsafe {
-        let ptr = &mut mac as *mut u8;
-        esp_efuse_mac_get_default(ptr);
-    }
-    let client_id = format!("robotica-remote-rust_{}", hex::encode(mac));
-
+    let client_id = format!("robotica-remote-rust_{}", get_unique_id());
     let conf = MqttClientConfiguration {
         client_id: Some(&client_id),
         keep_alive_interval: Some(std::time::Duration::new(60, 0)),

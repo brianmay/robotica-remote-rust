@@ -29,6 +29,7 @@ use crate::messages::Message;
 mod boards;
 mod config;
 
+mod hardware;
 mod input;
 mod messages;
 mod mqtt;
