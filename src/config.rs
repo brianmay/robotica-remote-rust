@@ -6,7 +6,7 @@ use crate::button_controllers::CommonConfig;
 use crate::button_controllers::Config;
 use crate::button_controllers::Icon;
 
-pub const NUM_CONTROLLERS: usize = 5;
+pub const NUM_CONTROLLERS: usize = 6;
 pub const NIGHT_TOPIC: &str = "state/Brian/Night/power";
 pub const NIGHT_CONTROLLER: usize = 0;
 
@@ -14,12 +14,22 @@ pub fn get_controllers_config() -> [Box<dyn Config>; NUM_CONTROLLERS] {
     [
         Box::new(LightConfig {
             c: CommonConfig {
-                name: "Brian Light".to_string(),
+                name: "Brian Auto".to_string(),
                 topic_substr: "Brian/Light".to_string(),
                 action: Action::Toggle,
                 icon: Icon::Light,
             },
             scene: "auto".to_string(),
+            priority: 100,
+        }),
+        Box::new(LightConfig {
+            c: CommonConfig {
+                name: "Brian On".to_string(),
+                topic_substr: "Brian/Light".to_string(),
+                action: Action::Toggle,
+                icon: Icon::Light,
+            },
+            scene: "default".to_string(),
             priority: 100,
         }),
         Box::new(SwitchConfig {
