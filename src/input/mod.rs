@@ -10,6 +10,7 @@ pub enum Value {
     High,
 }
 
+#[allow(dead_code)]
 pub type InputNotifyCallback = Box<dyn Fn(Value) + Send + 'static>;
 
 impl Display for Value {
