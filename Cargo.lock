@@ -626,8 +626,8 @@ dependencies = [
  "num_enum",
  "serde",
  "serde_json",
- "strum",
- "strum_macros",
+ "strum 0.23.0",
+ "strum_macros 0.23.1",
 ]
 
 [[package]]
@@ -635,6 +635,26 @@ name = "embuild"
 version = "0.28.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf7d180dca4cbfa157261f9ebe5bcbf1006912726ec22a37c1679df59dec8756"
+dependencies = [
+ "anyhow",
+ "bitflags",
+ "dirs",
+ "log",
+ "serde",
+ "serde_json",
+ "shlex",
+ "strum 0.23.0",
+ "strum_macros 0.23.1",
+ "thiserror",
+ "toml",
+ "xmas-elf",
+]
+
+[[package]]
+name = "embuild"
+version = "0.29.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0bc16ec3ed3e8c7bfa3d03dd02c5db29a7bc2ed906f3c34cb986778c3f969248"
 dependencies = [
  "anyhow",
  "bindgen",
@@ -647,8 +667,7 @@ dependencies = [
  "serde",
  "serde_json",
  "shlex",
- "strum",
- "strum_macros",
+ "strum 0.24.0",
  "tempfile",
  "thiserror",
  "toml",
@@ -714,7 +733,7 @@ dependencies = [
  "embedded-hal 0.2.7",
  "embedded-hal 1.0.0-alpha.8",
  "embedded-svc",
- "embuild",
+ "embuild 0.28.5",
  "esp-idf-sys",
  "nb 0.1.3",
 ]
@@ -728,7 +747,7 @@ dependencies = [
  "anyhow",
  "cstr_core",
  "embedded-svc",
- "embuild",
+ "embuild 0.28.5",
  "enumset",
  "esp-idf-hal",
  "esp-idf-sys",
@@ -738,16 +757,16 @@ dependencies = [
 
 [[package]]
 name = "esp-idf-sys"
-version = "0.31.0"
+version = "0.31.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "167d2cf3076a26d617ff544a7348c47c550ea7a574e09f41819ec8b657533330"
+checksum = "b239e46fe930f21ed36a25de1b6d29a0e22b65166f3a8e44624095a671f2f56c"
 dependencies = [
  "anyhow",
  "bindgen",
- "embuild",
+ "embuild 0.29.1",
  "paste",
  "regex",
- "strum",
+ "strum 0.24.0",
 ]
 
 [[package]]
@@ -951,6 +970,12 @@ checksum = "6d621efb26863f0e9924c6ac577e8275e5e6b77455db64ffa6c65c904e9e132c"
 dependencies = [
  "unicode-segmentation",
 ]
+
+[[package]]
+name = "heck"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2540771e65fc8cb83cd6e8a237f70c319bd5c29f78ed1084ba5d50eeac86f7f9"
 
 [[package]]
 name = "hermit-abi"
@@ -1467,7 +1492,7 @@ dependencies = [
  "embedded-graphics-framebuf",
  "embedded-hal 1.0.0-alpha.8",
  "embedded-svc",
- "embuild",
+ "embuild 0.28.5",
  "esp-idf-hal",
  "esp-idf-svc",
  "esp-idf-sys",
@@ -1707,7 +1732,16 @@ version = "0.23.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cae14b91c7d11c9a851d3fbc80a963198998c2a64eec840477fa92d8ce9b70bb"
 dependencies = [
- "strum_macros",
+ "strum_macros 0.23.1",
+]
+
+[[package]]
+name = "strum"
+version = "0.24.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e96acfc1b70604b8b2f1ffa4c57e59176c7dbb05d556c71ecd2f5498a1dee7f8"
+dependencies = [
+ "strum_macros 0.24.0",
 ]
 
 [[package]]
@@ -1716,7 +1750,20 @@ version = "0.23.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5bb0dc7ee9c15cea6199cde9a127fa16a4c5819af85395457ad72d68edc85a38"
 dependencies = [
- "heck",
+ "heck 0.3.3",
+ "proc-macro2",
+ "quote",
+ "rustversion",
+ "syn",
+]
+
+[[package]]
+name = "strum_macros"
+version = "0.24.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6878079b17446e4d3eba6192bb0a2950d5b14f0ed8424b852310e5a94345d0ef"
+dependencies = [
+ "heck 0.4.0",
  "proc-macro2",
  "quote",
  "rustversion",
@@ -1998,7 +2045,7 @@ checksum = "7b9cf3721195a355be332374eae7e53ad4a5e28427a46818decb4168086cba56"
 dependencies = [
  "anyhow",
  "embedded-graphics-core",
- "embuild",
+ "embuild 0.28.5",
  "esp-idf-sys",
  "once_cell",
  "smart-leds-trait",
