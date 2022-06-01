@@ -22,7 +22,7 @@ jobs:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v1
       - name: Install Rust for Xtensa
-        uses: esp-rs/xtensa-toolchain@v1
+        uses: esp-rs/xtensa-toolchain@v1.2
         with:
           default: true
           ldproxy: true
