@@ -48,7 +48,7 @@ robotica = [
 anyhow = { version = "1", features = ["backtrace"] }
 log = "0.4"
 url = "2"
-esp-idf-sys = { version = "0.31.0", features = ["binstart"] }
+esp-idf-sys = { version = "0.31.6", features = ["binstart"] }
 esp-idf-svc = { version = "0.40.0", features = ["experimental"] }
 esp-idf-hal = { version = "0.36.0" }
 embedded-svc = "0.20.3"
@@ -76,5 +76,5 @@ ft6x36 = { version = "0.2.0", optional = true }
 embedded-graphics-framebuf = "0.1.0"
 
 [build-dependencies]
-embuild = "0.28"
+embuild = "0.29"
 anyhow = "1"
