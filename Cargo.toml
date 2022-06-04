@@ -76,5 +76,5 @@ ft6x36 = { version = "0.2.0", optional = true }
 embedded-graphics-framebuf = "0.1.0"
 
 [build-dependencies]
-embuild = "0.28"
+embuild = "0.29"
 anyhow = "1"
