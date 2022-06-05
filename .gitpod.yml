@@ -3,9 +3,9 @@
 image:
   file: .gitpod.Dockerfile
 tasks:
- - name: Setup environment variables for Rust and ESP-IDF
-   command: |
-     source /home/gitpod/export-rust.sh
+  - name: Setup environment variables for Rust and ESP-IDF
+    command: |
+      source /home/gitpod/export-rust.sh
 
 vscode:
   extensions:
