@@ -4,9 +4,11 @@ use std::thread;
 
 use anyhow::Result;
 
-use embedded_svc::mqtt::client::{Client, Details, Event, Message, Publish, QoS};
+use embedded_svc::mqtt::client::{
+    utils::ConnState, Client, Connection, Details, Event, Message, MessageImpl, Publish, QoS,
+};
 
-use esp_idf_svc::mqtt::client::{EspMqttClient, EspMqttMessage, MqttClientConfiguration};
+use esp_idf_svc::mqtt::client::{EspMqttClient, MqttClientConfiguration};
 use esp_idf_sys::EspError;
 
 use log::*;
@@ -36,7 +38,7 @@ enum MqttCommand {
     Publish(String, bool, String),
 }
 
-fn event_to_string(event: &Event<EspMqttMessage>) -> String {
+fn event_to_string(event: &Event<MessageImpl>) -> String {
     match event {
         Event::BeforeConnect => "BeforeConnect".to_string(),
         Event::Connected(connected) => format!("Connected(session: {})", connected),
@@ -49,35 +51,10 @@ fn event_to_string(event: &Event<EspMqttMessage>) -> String {
     }
 }
 
-fn get_client(url: &str, tx: mpsc::Sender<MqttCommand>) -> Result<EspMqttClient, EspError> {
-    let callback = move |msg: &Option<Result<Event<EspMqttMessage>, EspError>>| {
-        let event_or_error = msg.as_ref().unwrap();
-        match event_or_error {
-            Err(e) => info!("MQTT Message ERROR: {}", e),
-            Ok(Event::Received(msg)) => match msg.details() {
-                Details::Complete(token) => {
-                    let topic = msg.topic(token).to_string();
-                    let raw = msg.data();
-                    let data = std::str::from_utf8(&raw).unwrap();
-                    tx.send(MqttCommand::MqttReceived(topic, data.to_string()))
-                        .unwrap();
-                }
-                Details::InitialChunk(_) => error!("Got InitialChunk message"),
-                Details::SubsequentChunk(_) => error!("Got SubsequentChunk message"),
-            },
-            Ok(Event::Connected(_)) => {
-                tx.send(MqttCommand::MqttConnect).unwrap();
-            }
-            Ok(Event::Disconnected) => {
-                tx.send(MqttCommand::MqttDisconnect).unwrap();
-            }
-            Ok(Event::Subscribed(_x)) => {
-                // Do nothing
-            }
-            Ok(event) => info!("Got unknown MQTT event {:?}", event_to_string(event)),
-        }
-    };
-
+fn get_client(
+    url: &str,
+    tx: mpsc::Sender<MqttCommand>,
+) -> Result<EspMqttClient<ConnState<MessageImpl, EspError>>, EspError> {
     let client_id = format!("robotica-remote-rust_{}", get_unique_id());
     let conf = MqttClientConfiguration {
         client_id: Some(&client_id),
@@ -85,7 +62,38 @@ fn get_client(url: &str, tx: mpsc::Sender<MqttCommand>) -> Result<EspMqttClient,
         ..Default::default()
     };
 
-    EspMqttClient::new_with_callback(url, &conf, callback)
+    let (client, mut connection) = EspMqttClient::new_with_conn(url, &conf)?;
+
+    thread::spawn(move || {
+        while let Some(msg) = connection.next() {
+            let event = msg.as_ref().unwrap();
+            match event {
+                Event::Received(msg) => match msg.details() {
+                    Details::Complete => {
+                        let topic = msg.topic().unwrap().to_string();
+                        let raw = msg.data();
+                        let data = std::str::from_utf8(&raw).unwrap();
+                        tx.send(MqttCommand::MqttReceived(topic, data.to_string()))
+                            .unwrap();
+                    }
+                    Details::InitialChunk(_) => error!("Got InitialChunk message"),
+                    Details::SubsequentChunk(_) => error!("Got SubsequentChunk message"),
+                },
+                Event::Connected(_) => {
+                    tx.send(MqttCommand::MqttConnect).unwrap();
+                }
+                Event::Disconnected => {
+                    tx.send(MqttCommand::MqttDisconnect).unwrap();
+                }
+                Event::Subscribed(_x) => {
+                    // Do nothing
+                }
+                event => info!("Got unknown MQTT event {:?}", event_to_string(event)),
+            }
+        }
+    });
+
+    Ok(client)
 }
 
 impl Mqtt {
