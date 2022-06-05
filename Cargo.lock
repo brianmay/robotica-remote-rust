@@ -838,9 +838,9 @@ dependencies = [
 
 [[package]]
 name = "ft6x36"
-version = "0.2.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9b9e377adcb676d4bafb4cf7ccefb7d9397b94aaa4da3178870fe5482ad7a76b"
+checksum = "80f9dfa108c27d6d95bd82f3b652f888a858f7875fb2b3b765887affa96130c7"
 dependencies = [
  "embedded-hal 0.2.7",
  "num_enum",
