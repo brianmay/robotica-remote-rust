@@ -51,7 +51,7 @@ url = "2"
 esp-idf-sys = { version = "0.31.6", features = ["binstart"] }
 esp-idf-svc = { version = "0.41.3", features = ["experimental"] }
 esp-idf-hal = { version = "0.37.4" }
-embedded-svc = "0.21.2"
+embedded-svc = "0.21.3"
 embedded-hal = "=1.0.0-alpha.8"
 embedded-graphics = "0.7.1"
 display-interface = { version = "0.4", optional = true }
