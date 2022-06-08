@@ -613,9 +613,9 @@ dependencies = [
 
 [[package]]
 name = "embedded-svc"
-version = "0.21.2"
+version = "0.21.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "28551f9c16b9a52e3641a0228b68ee5bfa08dbf6ff07f7ed0cc94626b9ebe0bb"
+checksum = "d915ef251b4b19f51943e306f9cf3b8d61f79cd790624f6a8982cfa85aca3622"
 dependencies = [
  "anyhow",
  "enumset",
@@ -740,9 +740,9 @@ dependencies = [
 
 [[package]]
 name = "esp-idf-svc"
-version = "0.41.3"
+version = "0.41.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "54d6c0a920854742edbd821e2d59436619db8dc6387df001969a1c76e28fa98b"
+checksum = "12bd726ec2881797a91c2717da67befc00d01cb8d1f635435fc4ac6a6968b764"
 dependencies = [
  "anyhow",
  "cstr_core",
