@@ -46,12 +46,13 @@ robotica = [
 
 [dependencies]
 anyhow = { version = "1", features = ["backtrace"] }
+heapless = "0.7.15"
 log = "0.4"
 url = "2"
 esp-idf-sys = { version = "0.31.6", features = ["binstart"] }
-esp-idf-svc = { version = "0.41.4", features = ["experimental"] }
-esp-idf-hal = { version = "0.37.4" }
-embedded-svc = "0.21.3"
+esp-idf-svc = { version = "0.42.0", features = ["experimental"] }
+esp-idf-hal = { version = "0.38.0" }
+embedded-svc = "0.22.0"
 embedded-hal = "=1.0.0-alpha.8"
 embedded-graphics = "0.7.1"
 display-interface = { version = "0.4", optional = true }

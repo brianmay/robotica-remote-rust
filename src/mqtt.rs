@@ -72,7 +72,7 @@ fn get_client(
                     Details::Complete => {
                         let topic = msg.topic().unwrap().to_string();
                         let raw = msg.data();
-                        let data = std::str::from_utf8(&raw).unwrap();
+                        let data = std::str::from_utf8(raw).unwrap();
                         tx.send(MqttCommand::MqttReceived(topic, data.to_string()))
                             .unwrap();
                     }
@@ -153,7 +153,7 @@ impl Mqtt {
                     MqttCommand::Publish(topic, retain, data) => {
                         debug!("Publishing {} {}", topic, data);
                         client
-                            .publish(topic, QoS::AtMostOnce, retain, data.as_bytes())
+                            .publish(&topic, QoS::AtMostOnce, retain, data.as_bytes())
                             .unwrap();
                     }
                 }

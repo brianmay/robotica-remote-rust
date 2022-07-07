@@ -40,7 +40,9 @@ type Display<'a, SDA, SCL> = Ssd1306<
     BufferedGraphicsMode<DisplaySize128x64>,
 >;
 
-impl<SDA: InputPin + OutputPin, SCL: OutputPin> FlushableDrawTarget for Display<'_, SDA, SCL> {
+impl<SDA: InputPin + OutputPin, SCL: InputPin + OutputPin> FlushableDrawTarget
+    for Display<'_, SDA, SCL>
+{
     fn flush(&mut self) -> Result<(), Self::Error> {
         self.flush()
     }
@@ -50,7 +52,7 @@ impl<SDA: InputPin + OutputPin, SCL: OutputPin> FlushableDrawTarget for Display<
     }
 }
 
-fn get_bus<SDA: InputPin + OutputPin, SCL: OutputPin>(
+fn get_bus<SDA: InputPin + OutputPin, SCL: InputPin + OutputPin>(
     i2c: i2c::I2C0,
     scl: SCL,
     sda: SDA,
@@ -66,7 +68,7 @@ fn get_bus<SDA: InputPin + OutputPin, SCL: OutputPin>(
 // This clippy warning is false, lifetimes are required here.
 #[allow(clippy::needless_lifetimes)]
 fn get_display<'a>(
-    bus: Bus<'a, impl InputPin + OutputPin, impl OutputPin>,
+    bus: Bus<'a, impl InputPin + OutputPin, impl InputPin + OutputPin>,
     address: u8,
 ) -> Result<
     impl FlushableDrawTarget<
@@ -92,7 +94,7 @@ pub const NUM_DISPLAYS: usize = 2;
 
 pub fn connect(
     i2c: i2c::I2C0,
-    scl: impl OutputPin + 'static,
+    scl: impl InputPin + OutputPin + 'static,
     sda: impl InputPin + OutputPin + 'static,
 ) -> Result<mpsc::Sender<DisplayCommand>> {
     let (tx, rx) = mpsc::channel();

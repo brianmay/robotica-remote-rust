@@ -13,6 +13,7 @@ use esp_idf_svc::wifi::*;
 use anyhow::bail;
 use anyhow::Result;
 
+use heapless::String;
 use log::*;
 
 use crate::hardware::esp32::get_unique_id;
@@ -41,7 +42,7 @@ fn wifi(
     info!("Connecting to wifi");
     let hostname = format!("robotica-remote_{}", get_unique_id());
     let dhcp_conf = DHCPClientSettings {
-        hostname: Some(hostname),
+        hostname: Some(String::from(hostname.as_str())),
     };
 
     let ip_conf = ipv4::ClientConfiguration::DHCP(dhcp_conf);
