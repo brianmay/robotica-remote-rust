@@ -612,6 +612,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "embedded-io"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "36673b79844ff4ec0e3f00aeca0b2cfff564ff6739ab9801d13f45a8ec6cc1c7"
+dependencies = [
+ "futures",
+]
+
+[[package]]
 name = "embedded-svc"
 version = "0.21.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -621,6 +630,24 @@ dependencies = [
  "enumset",
  "futures",
  "http-auth-basic",
+ "log",
+ "no-std-net",
+ "num_enum",
+ "serde",
+ "serde_json",
+ "strum 0.23.0",
+]
+
+[[package]]
+name = "embedded-svc"
+version = "0.22.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b52805b9b97351bb74d61d513e226bddb81e6e5117bca61d1d4371d4c795d7cc"
+dependencies = [
+ "anyhow",
+ "embedded-io",
+ "enumset",
+ "heapless",
  "log",
  "no-std-net",
  "num_enum",
@@ -733,7 +760,7 @@ dependencies = [
  "anyhow",
  "embedded-hal 0.2.7",
  "embedded-hal 1.0.0-alpha.8",
- "embedded-svc",
+ "embedded-svc 0.21.3",
  "embuild 0.29.2",
  "esp-idf-sys",
  "nb 0.1.3",
@@ -747,7 +774,7 @@ checksum = "12bd726ec2881797a91c2717da67befc00d01cb8d1f635435fc4ac6a6968b764"
 dependencies = [
  "anyhow",
  "cstr_core",
- "embedded-svc",
+ "embedded-svc 0.21.3",
  "embuild 0.29.2",
  "enumset",
  "esp-idf-hal",
@@ -901,11 +928,15 @@ version = "0.3.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d8b7abd5d659d9b90c8cba917f6ec750a74e2dc23902ef9cd4cc8c8b22e6036a"
 dependencies = [
+ "futures-channel",
  "futures-core",
+ "futures-io",
  "futures-sink",
  "futures-task",
+ "memchr",
  "pin-project-lite",
  "pin-utils",
+ "slab",
 ]
 
 [[package]]
@@ -972,6 +1003,7 @@ dependencies = [
  "atomic-polyfill",
  "hash32",
  "rustc_version 0.4.0",
+ "serde",
  "spin",
  "stable_deref_trait",
 ]
@@ -1503,7 +1535,7 @@ dependencies = [
  "embedded-graphics",
  "embedded-graphics-framebuf",
  "embedded-hal 1.0.0-alpha.8",
- "embedded-svc",
+ "embedded-svc 0.22.0",
  "embuild 0.29.2",
  "esp-idf-hal",
  "esp-idf-svc",
