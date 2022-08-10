@@ -49,7 +49,7 @@ anyhow = { version = "1", features = ["backtrace"] }
 heapless = "0.7.16"
 log = "0.4"
 url = "2"
-esp-idf-sys = { version = "0.31.6", features = ["binstart"] }
+esp-idf-sys = { version = "0.31.7", features = ["binstart"] }
 esp-idf-svc = { version = "0.42.1", features = ["experimental"] }
 esp-idf-hal = { version = "0.38.0" }
 embedded-svc = "0.22.1"
