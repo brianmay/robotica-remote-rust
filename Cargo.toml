@@ -46,7 +46,7 @@ robotica = [
 
 [dependencies]
 anyhow = { version = "1", features = ["backtrace"] }
-heapless = "0.7.15"
+heapless = "0.7.16"
 log = "0.4"
 url = "2"
 esp-idf-sys = { version = "0.31.6", features = ["binstart"] }
