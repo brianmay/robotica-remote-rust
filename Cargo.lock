@@ -1713,11 +1713,11 @@ dependencies = [
 
 [[package]]
 name = "socket2"
-version = "0.4.4"
-source = "git+https://github.com/esp-rs-compat/socket2#422c13c531c3cd518dc8d6be4588fe77a3199690"
+version = "0.4.5"
+source = "git+https://github.com/esp-rs-compat/socket2#afeb7231b461652c49c97cac9996547feef66c23"
 dependencies = [
  "libc",
- "winapi",
+ "windows-sys",
 ]
 
 [[package]]
