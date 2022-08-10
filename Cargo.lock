@@ -1321,7 +1321,7 @@ checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
 [[package]]
 name = "polling"
 version = "2.2.0"
-source = "git+https://github.com/esp-rs-compat/polling#da7b6a1c332b988aa03890873f3446e497ec5c92"
+source = "git+https://github.com/esp-rs-compat/polling#0a016089b1274f8e8121c45fea89f1be08d58a05"
 dependencies = [
  "cfg-if",
  "libc",
