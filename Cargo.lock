@@ -1697,7 +1697,7 @@ dependencies = [
 [[package]]
 name = "smol"
 version = "1.2.5"
-source = "git+https://github.com/esp-rs-compat/smol#ddc1fa9432336c5b5ae95c518acfe50648b42659"
+source = "git+https://github.com/esp-rs-compat/smol#15918c3cd3a19a472dbd74db5485f31b3d400984"
 dependencies = [
  "async-channel",
  "async-executor",
