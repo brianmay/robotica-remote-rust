@@ -37,9 +37,9 @@ dependencies = [
 
 [[package]]
 name = "anyhow"
-version = "1.0.59"
+version = "1.0.60"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c91f1f46651137be86f3a2b9a8359f9ab421d04d941c62b5982e1ca21113adf9"
+checksum = "c794e162a5eff65c72ef524dfe393eb923c354e350bb78b9c7383df13f3bc142"
 dependencies = [
  "backtrace",
 ]
@@ -1172,9 +1172,9 @@ dependencies = [
 
 [[package]]
 name = "mipidsi"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5c98186a3dcd69667a53fcfde689bdba1560aa695703b3cf5bfe109d1756caa8"
+checksum = "b365d14672f0ea0b78b8a33a41578fe52a0894e497d1d87413986667258f5d9e"
 dependencies = [
  "display-interface",
  "embedded-graphics-core",
