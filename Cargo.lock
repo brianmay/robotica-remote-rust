@@ -667,26 +667,6 @@ dependencies = [
 
 [[package]]
 name = "embuild"
-version = "0.28.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cf7d180dca4cbfa157261f9ebe5bcbf1006912726ec22a37c1679df59dec8756"
-dependencies = [
- "anyhow",
- "bitflags",
- "dirs",
- "log",
- "serde",
- "serde_json",
- "shlex",
- "strum 0.23.0",
- "strum_macros 0.23.1",
- "thiserror",
- "toml",
- "xmas-elf",
-]
-
-[[package]]
-name = "embuild"
 version = "0.29.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e08ee0a785214a338075e5c143b2e023ae0eaa27530d8d0d7cface65ef6a4f40"
@@ -2174,13 +2154,13 @@ checksum = "c811ca4a8c853ef420abd8592ba53ddbbac90410fab6903b3e79972a631f7680"
 
 [[package]]
 name = "ws2812-esp32-rmt-driver"
-version = "0.3.1"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7b9cf3721195a355be332374eae7e53ad4a5e28427a46818decb4168086cba56"
+checksum = "da336bcb91afc05f7e175c3fbf52c99a8ddef5a998f8d41149556cf2872daf5f"
 dependencies = [
  "anyhow",
  "embedded-graphics-core",
- "embuild 0.28.5",
+ "embuild 0.30.2",
  "esp-idf-sys",
  "once_cell",
  "smart-leds-trait",
