@@ -5,7 +5,7 @@ use esp_idf_hal::{
     i2c,
     prelude::*,
 };
-use ft6x36::{Ft6x36, TouchPoint};
+use ft6x36::{Dimension, Ft6x36, TouchPoint};
 use log::*;
 
 use crate::{
@@ -41,14 +41,14 @@ fn get_button_for_point(buttons: &[ButtonInfo], p: TouchPoint) -> Option<&Button
 pub(crate) fn connect(
     i2c1: i2c::I2C1,
     sda: impl OutputPin + InputPin + 'static,
-    scl: impl OutputPin + 'static,
+    scl: impl OutputPin + InputPin + 'static,
     buttons: [ButtonInfo; NUM_PER_PAGE],
     tx: messages::Sender,
 ) {
     let config = <i2c::config::MasterConfig as Default>::default().baudrate(400_u32.kHz().into());
     let i2c1 =
         i2c::Master::<i2c::I2C1, _, _>::new(i2c1, i2c::MasterPins { sda, scl }, config).unwrap();
-    let mut touch_screen = Ft6x36::new(i2c1);
+    let mut touch_screen = Ft6x36::new(i2c1, Dimension(320, 480));
     touch_screen.init().unwrap();
     match touch_screen.get_info() {
         Some(info) => info!("Touch screen info: {info:?}"),
