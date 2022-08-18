@@ -768,9 +768,9 @@ dependencies = [
 
 [[package]]
 name = "esp-idf-hal"
-version = "0.38.0"
+version = "0.38.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cc998eadd4eb0b3da435b72b5f4ac29b16b8937224bc08d49e5701038a1ab2d6"
+checksum = "aa416b08c24fc6439b59b7de329738e041af9bbddc733267e47085399f372487"
 dependencies = [
  "anyhow",
  "embedded-hal 0.2.7",
