@@ -19,6 +19,7 @@ use crate::{hardware::esp32::get_unique_id, messages};
 pub enum Label {
     Button(usize, u32),
     NightStatus,
+    LightStatus,
 }
 
 struct Subscription {

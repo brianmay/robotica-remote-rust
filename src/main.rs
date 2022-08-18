@@ -22,7 +22,6 @@ use pretty_env_logger::env_logger::WriteStyle;
 mod button_controllers;
 
 mod display;
-use crate::button_controllers::DisplayState;
 use crate::display::DisplayCommand;
 use crate::messages::Message;
 
@@ -50,7 +49,7 @@ enum TimeOfDay {
 
 struct RequestedDisplayStatus {
     time_of_day: TimeOfDay,
-    forced_on: bool,
+    light_on: bool,
     night_timer: bool,
 }
 
@@ -65,7 +64,7 @@ impl RequestedDisplayStatus {
     }
 
     fn get_display_required(&self) -> bool {
-        matches!(self.time_of_day, TimeOfDay::Day) || self.forced_on || self.night_timer
+        matches!(self.time_of_day, TimeOfDay::Day) || self.light_on || self.night_timer
     }
 
     fn turn_night_timer_on(&mut self) {
@@ -244,6 +243,7 @@ fn main() -> Result<()> {
     }
 
     mqtt.subscribe(config::NIGHT_TOPIC, mqtt::Label::NightStatus);
+    mqtt.subscribe(config::LIGHT_TOPIC, mqtt::Label::LightStatus);
 
     let mut timer_service = EspTimerService::new().unwrap();
     let mut timer = timer_service
@@ -254,7 +254,7 @@ fn main() -> Result<()> {
 
     let mut requested_display_status: RequestedDisplayStatus = RequestedDisplayStatus {
         time_of_day: TimeOfDay::Day,
-        forced_on: false,
+        light_on: false,
         night_timer: false,
     };
     let mut status: ActualDisplayStatus = ActualDisplayStatus {
@@ -294,29 +294,28 @@ fn main() -> Result<()> {
                     false,
                 );
             }
+            Message::MqttReceived(_, power, mqtt::Label::LightStatus) => {
+                info!("Got light status: {}", power);
+                match power.as_str() {
+                    "ON" => requested_display_status.light_on = true,
+                    "OFF" => requested_display_status.light_on = false,
+                    _ => {}
+                };
+                do_blank(
+                    &display,
+                    &mut timer,
+                    &requested_display_status,
+                    &mut status,
+                    false,
+                );
+            }
             Message::MqttReceived(topic, data, mqtt::Label::Button(id, sid)) => {
                 info!("Got message: {} - {}", topic, data);
                 let controller = controllers.get_mut(id as usize).unwrap();
                 let old_state = controller.get_display_state();
                 controller.process_message(sid, data);
                 let state = controller.get_display_state();
-                if id == config::NIGHT_CONTROLLER {
-                    match state {
-                        DisplayState::Off => requested_display_status.forced_on = false,
-                        DisplayState::HardOff => requested_display_status.forced_on = false,
-                        DisplayState::On => requested_display_status.forced_on = true,
-                        DisplayState::OnOther => requested_display_status.forced_on = true,
-                        DisplayState::Error => {}
-                        DisplayState::Unknown => {}
-                    }
-                    do_blank(
-                        &display,
-                        &mut timer,
-                        &requested_display_status,
-                        &mut status,
-                        false,
-                    );
-                }
+                info!("State changed: {} - {:?} -> {:?}", topic, old_state, state);
 
                 let (msg_page_num, id_in_page) = controller_to_page_id(id);
                 if page_num == msg_page_num && old_state != state {
