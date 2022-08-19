@@ -15,18 +15,31 @@ use log::*;
 
 use crate::{hardware::esp32::get_unique_id, messages};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Label {
     Button(usize, u32),
     NightStatus,
     LightStatus,
 }
 
-struct Subscription {
+#[derive(Debug)]
+pub struct Subscription {
     label: Label,
 }
 
-type Subscriptions = HashMap<String, Vec<Subscription>>;
+pub struct Subscriptions(HashMap<String, Vec<Subscription>>);
+
+impl Subscriptions {
+    pub fn new() -> Self {
+        Self(HashMap::new())
+    }
+
+    pub fn add(&mut self, topic: &str, label: Label) {
+        let subscriptions = self.0.entry(topic.to_string()).or_insert(Vec::new());
+        subscriptions.push(Subscription { label });
+    }
+}
+
 pub struct Mqtt {
     tx: mpsc::Sender<MqttCommand>,
 }
@@ -35,14 +48,13 @@ enum MqttCommand {
     MqttConnect,
     MqttDisconnect,
     MqttReceived(String, String),
-    Subscribe(String, Label),
     Publish(String, bool, String),
 }
 
 fn event_to_string(event: &Event<MessageImpl>) -> String {
     match event {
         Event::BeforeConnect => "BeforeConnect".to_string(),
-        Event::Connected(connected) => format!("Connected(session: {})", connected),
+        Event::Connected(connected) => format!("Connected(connected: {})", connected),
         Event::Disconnected => "Disconnected".to_string(),
         Event::Subscribed(message_id) => format!("Subscribed({})", message_id),
         Event::Unsubscribed(message_id) => format!("Unsubscribed({})", message_id),
@@ -98,7 +110,11 @@ fn get_client(
 }
 
 impl Mqtt {
-    pub fn connect(url: &str, tx_to_client: messages::Sender) -> Self {
+    pub fn connect(
+        url: &str,
+        tx_to_client: messages::Sender,
+        subscriptions: Subscriptions,
+    ) -> Self {
         let (tx, rx) = mpsc::channel();
         let url = url.to_string();
 
@@ -106,12 +122,11 @@ impl Mqtt {
 
         thread::spawn(move || {
             let mut client = get_client(&url, tx_copy).unwrap();
-            let mut subscriptions: Subscriptions = HashMap::new();
 
             for received in rx {
                 match received {
                     MqttCommand::MqttConnect => {
-                        for (topic, _) in subscriptions.iter() {
+                        for (topic, _) in subscriptions.0.iter() {
                             client.subscribe(topic, QoS::AtMostOnce).unwrap();
                         }
                         tx_to_client.send(messages::Message::MqttConnect).unwrap();
@@ -124,7 +139,7 @@ impl Mqtt {
                     }
 
                     MqttCommand::MqttReceived(topic, data) => {
-                        if let Some(list) = subscriptions.get(&topic) {
+                        if let Some(list) = subscriptions.0.get(&topic) {
                             for s in list {
                                 tx_to_client
                                     .send(messages::Message::MqttReceived(
@@ -135,20 +150,6 @@ impl Mqtt {
                                     .unwrap();
                             }
                         }
-                    }
-
-                    MqttCommand::Subscribe(topic, label) => {
-                        let subscription = Subscription { label };
-
-                        match subscriptions.get_mut(&topic) {
-                            Some(list) => list.push(subscription),
-                            None => {
-                                subscriptions.insert(topic.to_string(), vec![subscription]);
-                                if let Err(err) = client.subscribe(&topic, QoS::AtMostOnce) {
-                                    error!("Cannot subscribe to {}: {}", topic, err);
-                                }
-                            }
-                        };
                     }
 
                     MqttCommand::Publish(topic, retain, data) => {
@@ -162,12 +163,6 @@ impl Mqtt {
         });
 
         Mqtt { tx }
-    }
-
-    pub fn subscribe(&self, topic: &str, label: Label) {
-        let tx = self.tx.clone();
-        tx.send(MqttCommand::Subscribe(topic.to_string(), label))
-            .unwrap();
     }
 
     pub fn publish(&self, topic: &str, retain: bool, data: &str) {

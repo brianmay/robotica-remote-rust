@@ -17,6 +17,7 @@ use log::*;
 
 mod button;
 use button::ButtonId;
+use mqtt::Subscriptions;
 use pretty_env_logger::env_logger::WriteStyle;
 
 mod button_controllers;
@@ -231,19 +232,23 @@ fn main() -> Result<()> {
     let mut controllers: Vec<Box<dyn button_controllers::Controller>> =
         config_list.iter().map(|x| x.create_controller()).collect();
 
-    let mqtt = mqtt::Mqtt::connect(MQTT_URL, tx.clone());
-
-    for (index, f) in controllers.iter().enumerate() {
-        let subscriptions = f.get_subscriptions();
-        for s in subscriptions {
-            let label = mqtt::Label::Button(index, s.label);
-            info!("Subscribing to {}.", s.topic);
-            mqtt.subscribe(&s.topic, label);
+    let subscriptions = {
+        let mut subscriptions = Subscriptions::new();
+        for (index, f) in controllers.iter().enumerate() {
+            let new_subscriptions = f.get_subscriptions();
+            for s in new_subscriptions {
+                let label = mqtt::Label::Button(index, s.label);
+                info!("Subscribing to {}.", s.topic);
+                subscriptions.add(&s.topic, label);
+            }
         }
-    }
 
-    mqtt.subscribe(config::NIGHT_TOPIC, mqtt::Label::NightStatus);
-    mqtt.subscribe(config::LIGHT_TOPIC, mqtt::Label::LightStatus);
+        subscriptions.add(config::NIGHT_TOPIC, mqtt::Label::NightStatus);
+        subscriptions.add(config::LIGHT_TOPIC, mqtt::Label::LightStatus);
+        subscriptions
+    };
+
+    let mqtt = mqtt::Mqtt::connect(MQTT_URL, tx.clone(), subscriptions);
 
     let mut timer_service = EspTimerService::new().unwrap();
     let mut timer = timer_service
@@ -310,7 +315,7 @@ fn main() -> Result<()> {
                 );
             }
             Message::MqttReceived(topic, data, mqtt::Label::Button(id, sid)) => {
-                info!("Got message: {} - {}", topic, data);
+                info!("Got message for button {id}/{sid}: {} - {}", topic, data);
                 let controller = controllers.get_mut(id as usize).unwrap();
                 let old_state = controller.get_display_state();
                 controller.process_message(sid, data);
