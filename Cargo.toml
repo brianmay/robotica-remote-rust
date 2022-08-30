@@ -59,7 +59,7 @@ display-interface = { version = "0.4", optional = true }
 display-interface-spi = { version = "0.4", optional = true }
 # st7789 = "0.6"
 # ili9341 = { version = "0.5", path = "/home/brian/tmp/ili9341-rs", optional = true }
-mipidsi = { version = "0.2.2", optional = true }
+mipidsi = { version = "0.3.0", optional = true }
 # mipidsi = { version = "0.2.0", path = "/home/brian/tmp/mipidsi", optional = true }
 ssd1306 = { version = "0.7", optional = true }
 # epd-waveshare = "0.5.0"
