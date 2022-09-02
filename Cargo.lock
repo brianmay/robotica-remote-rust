@@ -588,6 +588,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e78d4f1cc4ae33bbfc157ed5d5a5ef3bc29227303d595861deb238fcec4e9457"
 
 [[package]]
+name = "embedded-dma"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "994f7e5b5cb23521c22304927195f236813053eb9c065dd2226a32ba64695446"
+dependencies = [
+ "stable_deref_trait",
+]
+
+[[package]]
 name = "embedded-graphics"
 version = "0.7.1"
 source = "git+https://github.com/embedded-graphics/embedded-graphics?branch=master#14434ceadcb774e5ff70a831370885e9b913c6bc"
@@ -610,10 +619,11 @@ dependencies = [
 
 [[package]]
 name = "embedded-graphics-framebuf"
-version = "0.1.0"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "de12fb0fd324d6d71b1c3dfad04bdb16b2c0d57c7a86c840a6dfbd7b8d54e4ea"
+checksum = "03f348b2818ebb88be69cc505ee78c0d39e078ef608f8eea41eb90575435b375"
 dependencies = [
+ "embedded-dma",
  "embedded-graphics",
 ]
 

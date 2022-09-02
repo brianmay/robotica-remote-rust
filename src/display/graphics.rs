@@ -144,9 +144,9 @@ impl Button {
         D::Color: PixelColor + From<Gray8> + From<Rgb555> + From<Rgb888>,
         D::Error: std::fmt::Debug,
     {
-        static mut FBUFF: FrameBuf<Rgb555, 128_usize, 64_usize> =
-            FrameBuf([[Rgb555::BLACK; 128]; 64]);
-        let mut fbuff = unsafe { &mut FBUFF };
+        static mut DATA: [Rgb555; 128 * 64] = [Rgb555::BLACK; 128 * 64];
+        let mut fbuff = unsafe { FrameBuf::new(&mut DATA, 128, 64) };
+
         let bounding_box = Rectangle {
             top_left: Point::zero(),
             size: Size::new(128, 64),
@@ -156,7 +156,7 @@ impl Button {
         let display = &mut displays[self.display];
 
         let u16_iter = fbuff.into_iter().map(|c| {
-            let c: D::Color = c.into();
+            let c: D::Color = c.1.into();
             c
         });
         display
