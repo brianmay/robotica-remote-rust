@@ -697,9 +697,9 @@ dependencies = [
 
 [[package]]
 name = "embuild"
-version = "0.30.2"
+version = "0.30.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "75c5cc517bb6e543b6dc30a364d5a20831160fa47b9539c8f0e83abdb32c5fb1"
+checksum = "01f030081cf69373a6c4b811934a81c7c9d3a11066ef22b564327a33f9991125"
 dependencies = [
  "anyhow",
  "bindgen",
@@ -811,15 +811,16 @@ dependencies = [
 
 [[package]]
 name = "esp-idf-sys"
-version = "0.31.8"
+version = "0.31.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c4f894db933f1f982221bd0483249b5b93b3830ae7a94624e216f59cb997fbe3"
+checksum = "17c64736a18d2bf2a4d661d787ca69499e59192ad11ae1cec50c4686303bed39"
 dependencies = [
  "anyhow",
  "bindgen",
  "cargo_metadata",
- "embuild 0.30.2",
+ "embuild 0.30.3",
  "envy",
+ "libc",
  "regex",
  "serde",
  "strum 0.24.0",
@@ -2161,7 +2162,7 @@ checksum = "da336bcb91afc05f7e175c3fbf52c99a8ddef5a998f8d41149556cf2872daf5f"
 dependencies = [
  "anyhow",
  "embedded-graphics-core",
- "embuild 0.30.2",
+ "embuild 0.30.3",
  "esp-idf-sys",
  "once_cell",
  "smart-leds-trait",
