@@ -677,9 +677,9 @@ dependencies = [
 
 [[package]]
 name = "embuild"
-version = "0.29.2"
+version = "0.29.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e08ee0a785214a338075e5c143b2e023ae0eaa27530d8d0d7cface65ef6a4f40"
+checksum = "cd1dd6c90e28cfc361281a692320fcd820bcae71d327215e87c7d749bf8ddd26"
 dependencies = [
  "anyhow",
  "bitflags",
@@ -717,6 +717,7 @@ dependencies = [
  "tempfile",
  "thiserror",
  "which",
+ "xmas-elf",
 ]
 
 [[package]]
@@ -786,7 +787,7 @@ dependencies = [
  "embedded-hal 0.2.7",
  "embedded-hal 1.0.0-alpha.8",
  "embedded-svc",
- "embuild 0.29.2",
+ "embuild 0.29.3",
  "esp-idf-sys",
  "nb 0.1.3",
 ]
@@ -800,7 +801,7 @@ dependencies = [
  "anyhow",
  "cstr_core",
  "embedded-svc",
- "embuild 0.29.2",
+ "embuild 0.29.3",
  "enumset",
  "esp-idf-hal",
  "esp-idf-sys",
@@ -1564,7 +1565,7 @@ dependencies = [
  "embedded-graphics-framebuf",
  "embedded-hal 1.0.0-alpha.8",
  "embedded-svc",
- "embuild 0.29.2",
+ "embuild 0.30.3",
  "esp-idf-hal",
  "esp-idf-svc",
  "esp-idf-sys",
