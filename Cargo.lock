@@ -793,14 +793,14 @@ dependencies = [
 
 [[package]]
 name = "esp-idf-svc"
-version = "0.42.3"
+version = "0.42.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "387d825a34a24ff5572385a6d42d94dc3b58f16b7f166a765f612178d4c16dcc"
+checksum = "5e8b425f2b068a11e5c3a03422052110825e250f08500038f1795c64d1e37454"
 dependencies = [
  "anyhow",
  "cstr_core",
  "embedded-svc",
- "embuild 0.29.2",
+ "embuild 0.30.3",
  "enumset",
  "esp-idf-hal",
  "esp-idf-sys",
