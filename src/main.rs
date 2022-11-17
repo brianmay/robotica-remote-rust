@@ -1,5 +1,4 @@
 #![allow(clippy::single_component_path_imports)]
-#![feature(backtrace)]
 
 use std::env;
 use std::ops::Range;

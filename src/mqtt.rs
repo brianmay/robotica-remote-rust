@@ -35,7 +35,7 @@ impl Subscriptions {
     }
 
     pub fn add(&mut self, topic: &str, label: Label) {
-        let subscriptions = self.0.entry(topic.to_string()).or_insert(Vec::new());
+        let subscriptions = self.0.entry(topic.to_string()).or_default();
         subscriptions.push(Subscription { label });
     }
 }
