@@ -1,5 +1,5 @@
 [package]
-name = "robotica-remote-rust"
+name = "robotica-remote"
 version = "0.22.8"
 authors = ["brianmay"]
 edition = "2021"
@@ -27,7 +27,7 @@ debug = true    # Symbols are nice and they don't increase the size on Flash
 opt-level = "z"
 
 [features]
-default = ["native", "lca2021_badge"]
+default = ["native", "makerfab"]
 
 # Enable this feature for the build to use ESP-IDF native tooling instead of PlatformIO under the hood
 native = ["esp-idf-sys/native"]
@@ -75,6 +75,7 @@ ws2812-esp32-rmt-driver = { version = "0.4.0", optional = true }
 hex = "0.4.3"
 ft6x36 = { version = "0.4.0", optional = true }
 embedded-graphics-framebuf = "0.2.0"
+# robotica-common = { git = "https://github.com/brianmay/robotica-rust.git" }
 
 [build-dependencies]
 embuild = "0.29"

@@ -26,8 +26,8 @@ use esp_idf_hal::spi::Master;
 use esp_idf_hal::spi::SPI2;
 use log::info;
 use mipidsi::models::ILI9486Rgb666;
+use mipidsi::Builder;
 use mipidsi::ColorOrder;
-use mipidsi::DisplayOptions;
 use mipidsi::Orientation;
 use std::sync::mpsc;
 use std::thread;
@@ -40,7 +40,7 @@ type SpiInterface = SPIInterface<
     Gpio33<Output>,
     Gpio15<Output>,
 >;
-type OrigDisplay = mipidsi::Display<SpiInterface, Gpio4<Output>, ILI9486Rgb666>;
+type OrigDisplay = mipidsi::Display<SpiInterface, ILI9486Rgb666, Gpio4<Output>>;
 
 struct Display<BL>(OrigDisplay, BL);
 
@@ -133,14 +133,12 @@ pub fn connect(
     let spi = spi::Master::<spi::SPI2, _, _, _, _>::new(spi, pins, config)?;
     let di = SPIInterface::new(spi, dc.into_output()?, cs);
 
-    let mut display = mipidsi::Display::ili9486_rgb666(di, reset);
-    let options = DisplayOptions {
-        orientation: Orientation::Landscape(false),
-        invert_vertical_refresh: false,
-        color_order: ColorOrder::Bgr,
-        invert_horizontal_refresh: false,
-    };
-    display.init(&mut delay::Ets, options).unwrap();
+    let display = Builder::ili9486_rgb666(di)
+        // .with_size(Size::new(320, 480))
+        .with_orientation(Orientation::Landscape(false))
+        .with_color_order(ColorOrder::Bgr)
+        .init(&mut delay::Ets, Some(reset))
+        .unwrap();
 
     let display = Display(display, bl);
 
