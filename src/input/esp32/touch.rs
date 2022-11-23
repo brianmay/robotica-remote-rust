@@ -1,8 +1,10 @@
 // Adapted from https://github.com/iamabetterdogtht/esp32-touch-sensor-example/blob/a45cd34c43963305bd84fd7dbc31414a5e4c41f4/src/touch.rs
 
+use embedded_hal::digital::InputPin;
 use esp_idf_svc::notify::Configuration;
 use esp_idf_svc::notify::EspNotify;
 use esp_idf_svc::notify::EspSubscription;
+use log::info;
 use std::ffi::c_void;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
@@ -10,20 +12,17 @@ use std::time::Duration;
 
 use arr_macro::arr;
 
-use log::*;
-
 use anyhow::Result;
 use esp_idf_hal::gpio;
 use esp_idf_sys as sys;
 use esp_idf_sys::esp;
 
-use embedded_hal::digital::blocking::InputPin;
 use embedded_hal::digital::ErrorType;
 
-use embedded_svc::event_bus::EventBus;
 use embedded_svc::event_bus::Postbox;
 
-use crate::input::{InputPinNotify, Value};
+use crate::input::InputPinNotify;
+use crate::input::Value;
 
 const NUM_TOUCH_PINS: usize = 10;
 
@@ -112,7 +111,7 @@ impl InputPin for TouchPin {
 }
 
 impl InputPinNotify for TouchPin {
-    fn subscribe<F: Fn(crate::input::Value) + Send + 'static>(&self, callback: F) {
+    fn safe_subscribe<F: Fn(crate::input::Value) + Send + 'static>(&mut self, callback: F) {
         info!("About to start a background touch event loop");
 
         if unsafe { !INITIALIZED.load(Ordering::SeqCst) } {
@@ -121,7 +120,7 @@ impl InputPinNotify for TouchPin {
         }
 
         let config = Configuration::default();
-        let mut notify = EspNotify::new(&config).unwrap();
+        let notify = EspNotify::new(&config).unwrap();
 
         let s = notify
             .subscribe(move |v| {

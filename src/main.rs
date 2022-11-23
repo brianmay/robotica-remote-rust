@@ -9,7 +9,7 @@ use boards::Board;
 use boards::NUM_CONTROLLERS_PER_PAGE;
 use embedded_svc::timer::OnceTimer;
 use embedded_svc::timer::Timer;
-use embedded_svc::timer::TimerService;
+// use embedded_svc::timer::TimerService;
 use esp_idf_svc::timer::EspTimer;
 use esp_idf_svc::timer::EspTimerService;
 use log::*;
@@ -249,7 +249,7 @@ fn main() -> Result<()> {
 
     let mqtt = mqtt::Mqtt::connect(MQTT_URL, tx.clone(), subscriptions);
 
-    let mut timer_service = EspTimerService::new().unwrap();
+    let timer_service = EspTimerService::new().unwrap();
     let mut timer = timer_service
         .timer(move || {
             tx.send(Message::BlankDisplays).unwrap();

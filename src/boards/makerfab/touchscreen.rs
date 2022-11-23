@@ -3,7 +3,7 @@ use std::{thread, time::Duration};
 use esp_idf_hal::{
     gpio::{InputPin, OutputPin},
     i2c,
-    prelude::*,
+    units::FromValueType,
 };
 use ft6x36::{Dimension, Ft6x36, TouchPoint};
 use log::*;
@@ -45,10 +45,18 @@ pub(crate) fn connect(
     buttons: [ButtonInfo; NUM_PER_PAGE],
     tx: messages::Sender,
 ) {
-    let config = <i2c::config::MasterConfig as Default>::default().baudrate(400_u32.kHz().into());
-    let i2c1 =
-        i2c::Master::<i2c::I2C1, _, _>::new(i2c1, i2c::MasterPins { sda, scl }, config).unwrap();
-    let mut touch_screen = Ft6x36::new(i2c1, Dimension(320, 480));
+    let driver = i2c::I2cDriver::new(
+        i2c1,
+        sda,
+        scl,
+        &i2c::I2cConfig::new().baudrate(400.kHz().into()),
+    )
+    .unwrap();
+
+    // let config = <i2c::config::MasterConfig as Default>::default().baudrate(400_u32.kHz().into());
+    // let i2c1 =
+    //     i2c::Master::<i2c::I2C1, _, _>::new(i2c1, i2c::MasterPins { sda, scl }, config).unwrap();
+    let mut touch_screen = Ft6x36::new(driver, Dimension(320, 480));
     touch_screen.init().unwrap();
     match touch_screen.get_info() {
         Some(info) => info!("Touch screen info: {info:?}"),

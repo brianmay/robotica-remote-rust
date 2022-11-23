@@ -6,6 +6,7 @@ use anyhow::Result;
 
 use embedded_graphics::prelude::*;
 use embedded_graphics::primitives::Rectangle;
+use esp_idf_hal::gpio::PinDriver;
 use esp_idf_hal::prelude::*;
 use esp_idf_svc::sntp::EspSntp;
 use esp_idf_svc::wifi::EspWifi;
@@ -22,7 +23,7 @@ pub const NUM_CONTROLLERS_PER_PAGE: usize = display::makerfab::NUM_PER_PAGE;
 
 #[allow(dead_code)]
 pub struct Makerfab {
-    wifi: EspWifi,
+    wifi: EspWifi<'static>,
     sntp: EspSntp,
     display: mpsc::Sender<display::DisplayCommand>,
     // touch_screen: Ft6x36<EspI2c1>,
@@ -43,7 +44,7 @@ pub fn configure_devices(tx: mpsc::Sender<messages::Message>) -> Result<Makerfab
     let peripherals = Peripherals::take().unwrap();
     let pins = peripherals.pins;
 
-    let backlight = pins.gpio5.into_output().unwrap();
+    let backlight = PinDriver::output(pins.gpio5)?;
     // backlight.set_low().unwrap();
 
     let buttons: [ButtonInfo; NUM_PER_PAGE] = [
@@ -110,10 +111,10 @@ pub fn configure_devices(tx: mpsc::Sender<messages::Message>) -> Result<Makerfab
     )
     .unwrap();
 
-    let (wifi, sntp) = wifi::esp::connect()?;
+    let (wifi, sntp) = wifi::esp::connect(peripherals.modem)?;
 
-    let sda = pins.gpio26.into_output().unwrap();
-    let scl = pins.gpio27.into_output().unwrap();
+    let sda = pins.gpio26;
+    let scl = pins.gpio27;
     let i2c1 = peripherals.i2c1;
     touchscreen::connect(i2c1, sda, scl, buttons, tx);
 

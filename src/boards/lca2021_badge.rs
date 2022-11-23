@@ -1,4 +1,6 @@
 use std::sync::mpsc;
+use std::thread;
+use std::time::Duration;
 
 use anyhow::Result;
 
@@ -19,7 +21,7 @@ pub const NUM_CONTROLLERS_PER_PAGE: usize = display::lca2021_badge::NUM_PER_PAGE
 
 #[allow(dead_code)]
 pub struct Lca2022Badge {
-    wifi: EspWifi,
+    wifi: EspWifi<'static>,
     sntp: EspSntp,
     display: mpsc::Sender<display::DisplayCommand>,
 }
@@ -36,13 +38,13 @@ pub fn configure_devices(tx: mpsc::Sender<messages::Message>) -> Result<Lca2022B
 
     let display = display::lca2021_badge::connect(peripherals.i2c0, pins.gpio4, pins.gpio5)?;
 
-    let (wifi, sntp) = wifi::esp::connect()?;
+    let (wifi, sntp) = wifi::esp::connect(peripherals.modem)?;
 
-    let pin = pins.gpio16.into_input().unwrap();
-    button::gpio::configure_button(pin, tx.clone(), button::ButtonId::Physical(0))?;
-
-    let pin = pins.gpio17.into_input().unwrap();
-    button::gpio::configure_button(pin, tx.clone(), button::ButtonId::Physical(1))?;
+    button::gpio::configure_button(pins.gpio16, tx.clone(), button::ButtonId::Physical(0))?;
+    // FIXME: Work around race condition in esp-idf-hal,
+    // see https://github.com/esp-rs/esp-idf-hal/issues/179
+    thread::sleep(Duration::from_secs(1));
+    button::gpio::configure_button(pins.gpio17, tx.clone(), button::ButtonId::Physical(1))?;
 
     let mut touch_builder = TouchControllerBuilder::new().unwrap();
     let touch_pin1 = touch_builder.add_pin(pins.gpio15, 400).unwrap();

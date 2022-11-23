@@ -5,11 +5,8 @@ use std::time::Duration;
 
 use anyhow::Result;
 
-use embedded_hal::digital::blocking::InputPin;
 use embedded_hal::digital::ErrorType;
-use embedded_svc::timer::OnceTimer;
-use embedded_svc::timer::Timer;
-use embedded_svc::timer::TimerService;
+use embedded_hal::digital::InputPin;
 use esp_idf_svc::timer::EspTimerService;
 use std::thread;
 
@@ -41,7 +38,7 @@ enum TouchDebouncerState {
 
 impl TouchDebouncer {
     pub fn new<T: InputPinNotify<Error = impl Debug + Display> + Send + 'static>(
-        pin: T,
+        mut pin: T,
         debounce_time_ms: u16,
         poll_time_ms: u16,
     ) -> Self {
@@ -50,14 +47,14 @@ impl TouchDebouncer {
         let poll_time = Duration::from_millis(poll_time_ms as u64);
 
         let tx_clone = tx.clone();
-        pin.subscribe(move |value| {
+        pin.safe_subscribe(move |value| {
             tx_clone.send(TouchDebouncerMessage::Input(value)).unwrap();
         });
 
-        let mut timer_service = EspTimerService::new().unwrap();
+        let timer_service = EspTimerService::new().unwrap();
 
         let tx_clone = tx.clone();
-        let mut timer = timer_service
+        let timer = timer_service
             .timer(move || {
                 tx_clone.send(TouchDebouncerMessage::Timer).unwrap();
             })
@@ -106,7 +103,7 @@ impl TouchDebouncer {
                     }
                     TouchDebouncerMessage::Timer => {
                         if let TouchDebouncerState::Debounce = state {
-                            // println!("Got debounce timer");
+                            println!("Got debounce timer");
                             if value != raw_value {
                                 value = raw_value;
                                 // println!("Sending {:?}", value);
@@ -126,7 +123,7 @@ impl TouchDebouncer {
                         }
 
                         if let TouchDebouncerState::ActivePoll = state {
-                            // println!("reseting poll timer");
+                            // println!("resetting poll timer");
                             timer.after(poll_time).unwrap();
                         }
                     }
@@ -145,7 +142,7 @@ impl TouchDebouncer {
 }
 
 impl InputPinNotify for TouchDebouncer {
-    fn subscribe<F: Fn(Value) + Send + 'static>(&self, callback: F) {
+    fn safe_subscribe<F: Fn(Value) + Send + 'static>(&mut self, callback: F) {
         self.tx
             .send(TouchDebouncerMessage::Subscribe(Box::new(callback)))
             .unwrap();

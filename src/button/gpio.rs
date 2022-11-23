@@ -6,11 +6,10 @@ use std::time::Duration;
 
 use anyhow::Result;
 
-use embedded_hal::digital::blocking::InputPin;
 use embedded_hal::digital::ErrorType;
-use embedded_svc::timer::OnceTimer;
-use embedded_svc::timer::Timer;
-use embedded_svc::timer::TimerService;
+use embedded_hal::digital::InputPin;
+use esp_idf_hal::gpio;
+use esp_idf_hal::gpio::PinDriver;
 use esp_idf_svc::timer::EspTimerService;
 use std::thread;
 
@@ -30,13 +29,13 @@ pub enum Active {
 }
 
 pub fn button<T: InputPinNotify<Error = impl Debug + Display>>(
-    pin: T,
+    mut pin: T,
     active: Active,
     id: ButtonId,
     tx: messages::Sender,
 ) {
     let value: RefCell<Option<Value>> = RefCell::new(None);
-    pin.subscribe(move |v| {
+    pin.safe_subscribe(move |v| {
         let pressed = matches!(
             (&active, v),
             (Active::Low, Value::Low) | (Active::High, Value::High)
@@ -68,31 +67,30 @@ enum DebouncerMessage {
 }
 
 pub struct Debouncer {
+    // driver: gpio::PinDriver<'static, T, gpio::Input>,
     tx: mpsc::Sender<DebouncerMessage>,
 }
 
 impl Debouncer {
-    pub fn new<T: InputPinNotify<Error = impl Debug + Display> + Send + 'static>(
-        pin: T,
-        debounce_time_ms: u16,
-    ) -> Self {
+    pub fn new<T: gpio::InputPin + gpio::OutputPin>(pin: T, debounce_time_ms: u16) -> Self {
         let (tx, rx) = mpsc::channel();
         let debounce_time = Duration::from_millis(debounce_time_ms as u64);
 
         let tx_clone = tx.clone();
-        pin.subscribe(move |value| {
-            tx_clone.send(DebouncerMessage::Input(value)).unwrap();
-        });
-
-        let tx_clone = tx.clone();
-        let mut timer_service = EspTimerService::new().unwrap();
-        let mut timer = timer_service
+        let timer_service = EspTimerService::new().unwrap();
+        let timer = timer_service
             .timer(move || {
                 tx_clone.send(DebouncerMessage::Timer).unwrap();
             })
             .unwrap();
 
+        let tx_clone = tx.clone();
         thread::spawn(move || {
+            let mut driver = PinDriver::input(pin).unwrap();
+            driver.safe_subscribe(move |value| {
+                tx_clone.send(DebouncerMessage::Input(value)).unwrap();
+            });
+
             let mut timer_set = false;
             let mut value: Option<Value> = None;
             let mut subscriber: Option<InputNotifyCallback> = None;
@@ -118,9 +116,9 @@ impl Debouncer {
                     DebouncerMessage::GetValue(reply_tx) => {
                         let out_value = if value.is_some() {
                             value
-                        } else if pin.is_high().unwrap_or(false) {
+                        } else if driver.is_high() {
                             Some(Value::High)
-                        } else if pin.is_low().unwrap_or(false) {
+                        } else if driver.is_low() {
                             Some(Value::Low)
                         } else {
                             None
@@ -128,9 +126,9 @@ impl Debouncer {
                         reply_tx.send(out_value).unwrap();
                     }
                     DebouncerMessage::Timer => {
-                        let raw_value = if pin.is_high().unwrap_or(false) {
+                        let raw_value = if driver.is_high() {
                             Some(Value::High)
-                        } else if pin.is_low().unwrap_or(false) {
+                        } else if driver.is_low() {
                             Some(Value::Low)
                         } else {
                             None
@@ -169,7 +167,7 @@ fn notify(subscriber: &Option<InputNotifyCallback>, new_state: Option<Value>) {
 }
 
 impl InputPinNotify for Debouncer {
-    fn subscribe<F: Fn(Value) + Send + 'static>(&self, callback: F) {
+    fn safe_subscribe<F: Fn(Value) + Send + 'static>(&mut self, callback: F) {
         self.tx
             .send(DebouncerMessage::Subscribe(Box::new(callback)))
             .unwrap();
@@ -192,11 +190,13 @@ impl ErrorType for Debouncer {
     type Error = anyhow::Error;
 }
 
-pub fn configure_button<T: 'static + InputPinNotify<Error = impl Debug + Display> + Send>(
-    pin: T,
+pub fn configure_button(
+    pin: impl gpio::InputPin + gpio::OutputPin,
     tx: messages::Sender,
     id: ButtonId,
 ) -> Result<()> {
+    // let mut pin = gpio::PinDriver::input(pin)?;
+    // pin.set_pull(Pull::Up)?;
     let debounced_encoder_pin = Debouncer::new(pin, 200);
     button(debounced_encoder_pin, Active::Low, id, tx);
     Ok(())

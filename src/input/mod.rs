@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use embedded_hal::digital::blocking::InputPin;
+use embedded_hal::digital::InputPin;
 
 pub mod esp32;
 
@@ -22,5 +22,5 @@ impl Display for Value {
     }
 }
 pub trait InputPinNotify: InputPin {
-    fn subscribe<F: Fn(Value) + Send + 'static>(&self, callback: F);
+    fn safe_subscribe<F: Fn(Value) + Send + 'static>(&mut self, callback: F);
 }

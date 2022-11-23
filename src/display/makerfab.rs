@@ -5,25 +5,31 @@ use crate::display::graphics::display_thread;
 use crate::display::graphics::Button;
 use anyhow::Result;
 use display_interface_spi::SPIInterface;
+// use display_interface_spi::SPIInterfaceNoCS;
 use embedded_graphics::prelude::*;
 use embedded_graphics::primitives::Rectangle;
-use embedded_hal::digital::blocking::OutputPin;
-use embedded_hal::spi::MODE_0;
+use embedded_hal::digital::OutputPin;
+// use embedded_hal::digital::blocking::OutputPin;
+// use embedded_hal::spi::MODE_0;
 use esp_idf_hal::delay;
 use esp_idf_hal::gpio;
-use esp_idf_hal::gpio::Gpio12;
-use esp_idf_hal::gpio::Gpio13;
-use esp_idf_hal::gpio::Gpio14;
+// use esp_idf_hal::gpio::Gpio12;
+// use esp_idf_hal::gpio::Gpio13;
+// use esp_idf_hal::gpio::Gpio14;
 use esp_idf_hal::gpio::Gpio15;
-use esp_idf_hal::gpio::Gpio21;
+// use esp_idf_hal::gpio::Gpio21;
 use esp_idf_hal::gpio::Gpio33;
 use esp_idf_hal::gpio::Gpio4;
 use esp_idf_hal::gpio::Output;
-use esp_idf_hal::gpio::Unknown;
+use esp_idf_hal::gpio::PinDriver;
+// use esp_idf_hal::gpio::Output;
+// use esp_idf_hal::gpio::Unknown;
 use esp_idf_hal::prelude::*;
 use esp_idf_hal::spi;
-use esp_idf_hal::spi::Master;
-use esp_idf_hal::spi::SPI2;
+// use esp_idf_hal::spi::Master;
+use esp_idf_hal::spi::SpiDeviceDriver;
+use esp_idf_hal::spi::SpiDriver;
+// use esp_idf_hal::spi::SPI2;
 use log::info;
 use mipidsi::models::ILI9486Rgb666;
 use mipidsi::Builder;
@@ -35,24 +41,26 @@ use std::thread;
 pub const NUM_PER_PAGE: usize = 12;
 pub const NUM_DISPLAYS: usize = 1;
 
-type SpiInterface = SPIInterface<
-    Master<SPI2, Gpio14<Unknown>, Gpio13<Unknown>, Gpio12<Unknown>, Gpio21<Unknown>>,
-    Gpio33<Output>,
-    Gpio15<Output>,
+type SpiInterface<'a> = SPIInterface<
+    SpiDeviceDriver<'a, SpiDriver<'a>>,
+    PinDriver<'a, Gpio33, Output>,
+    PinDriver<'a, Gpio15, Output>,
 >;
-type OrigDisplay = mipidsi::Display<SpiInterface, ILI9486Rgb666, Gpio4<Output>>;
 
-struct Display<BL>(OrigDisplay, BL);
+type OrigDisplay<'a> =
+    mipidsi::Display<SpiInterface<'a>, ILI9486Rgb666, PinDriver<'a, Gpio4, Output>>;
 
-impl<BL> OriginDimensions for Display<BL> {
+struct Display<'a, BL>(OrigDisplay<'a>, BL);
+
+impl<'a, BL> OriginDimensions for Display<'a, BL> {
     fn size(&self) -> Size {
         self.0.size()
     }
 }
 
-impl<BL> DrawTarget for Display<BL> {
-    type Color = <OrigDisplay as DrawTarget>::Color;
-    type Error = <OrigDisplay as DrawTarget>::Error;
+impl<'a, BL> DrawTarget for Display<'a, BL> {
+    type Color = <OrigDisplay<'a> as DrawTarget>::Color;
+    type Error = <OrigDisplay<'a> as DrawTarget>::Error;
 
     fn draw_iter<I>(&mut self, pixels: I) -> Result<(), Self::Error>
     where
@@ -77,7 +85,7 @@ impl<BL> DrawTarget for Display<BL> {
     }
 }
 
-impl<BL: OutputPin> FlushableDrawTarget for Display<BL> {
+impl<'a, BL: OutputPin> FlushableDrawTarget for Display<'a, BL> {
     fn flush(&mut self) -> Result<(), Self::Error> {
         Ok(())
     }
@@ -94,13 +102,13 @@ impl<BL: OutputPin> FlushableDrawTarget for Display<BL> {
 
 #[allow(clippy::too_many_arguments)]
 pub fn connect(
-    dc: gpio::Gpio33<gpio::Unknown>,
-    rst: gpio::Gpio4<gpio::Unknown>,
+    dc: gpio::Gpio33,
+    reset: gpio::Gpio4,
     spi: spi::SPI2,
-    sclk: gpio::Gpio14<gpio::Unknown>,
-    sdo: gpio::Gpio13<gpio::Unknown>,
-    sdi: gpio::Gpio12<gpio::Unknown>,
-    cs: gpio::Gpio15<gpio::Unknown>,
+    sclk: gpio::Gpio14,
+    sdo: gpio::Gpio13,
+    _sdi: gpio::Gpio12,
+    cs: gpio::Gpio15,
     bl: impl OutputPin + Send + 'static,
     buttons: &[ButtonInfo; NUM_PER_PAGE],
 ) -> Result<mpsc::Sender<DisplayCommand>> {
@@ -108,30 +116,44 @@ pub fn connect(
 
     info!("About to initialize the SPI LED driver");
 
-    let config = <spi::config::Config as Default>::default()
-        .baudrate((60).MHz().into())
-        .data_mode(MODE_0);
+    // let config = <spi::config::Config as Default>::default()
+    //     .baudrate((60).MHz().into())
+    //     .data_mode(MODE_0);
 
-    let mut cs = cs.into_output()?;
+    let mut cs = gpio::PinDriver::output(cs)?;
     cs.set_high()?;
 
-    let mut reset = rst.into_output()?;
+    let mut reset = gpio::PinDriver::output(reset)?;
     reset.set_high()?;
 
-    let mut dc = dc.into_output()?;
+    let mut dc = gpio::PinDriver::output(dc)?;
     dc.set_high()?;
 
     // let (sdi, sdo) = (sdo, sdi);
-    let pins = spi::Pins {
-        sclk,
-        sdo,
-        sdi: Some(sdi),
-        // cs: Some(cs),
-        cs: Option::<gpio::Gpio21<gpio::Unknown>>::None,
-    };
+    // let pins = spi::Pins {
+    //     sclk,
+    //     sdo,
+    //     sdi: Some(sdi),
+    //     // cs: Some(cs),
+    //     cs: Option::<gpio::Gpio21>::None,
+    // };
 
-    let spi = spi::Master::<spi::SPI2, _, _, _, _>::new(spi, pins, config)?;
-    let di = SPIInterface::new(spi, dc.into_output()?, cs);
+    // let spi = spi::Master::<spi::SPI2, _, _, _, _>::new(spi, pins, config)?;
+    // let di = SPIInterface::new(spi, dc.into_output()?, cs);
+
+    let di = SPIInterface::new(
+        spi::SpiDeviceDriver::new_single(
+            spi,
+            sclk,
+            sdo,
+            Option::<gpio::AnyIOPin>::None,
+            spi::Dma::Disabled,
+            Option::<gpio::Gpio21>::None,
+            &spi::SpiConfig::new().baudrate(60.MHz().into()),
+        )?,
+        dc,
+        cs,
+    );
 
     let display = Builder::ili9486_rgb666(di)
         // .with_size(Size::new(320, 480))

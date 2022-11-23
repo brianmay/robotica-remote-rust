@@ -4,8 +4,9 @@ use std::thread;
 
 use anyhow::Result;
 
-use embedded_svc::mqtt::client::{
-    utils::ConnState, Client, Connection, Details, Event, Message, MessageImpl, Publish, QoS,
+use embedded_svc::{
+    mqtt::client::{Connection, Details, Event, Message, MessageImpl, QoS},
+    utils::mqtt::client::ConnState,
 };
 
 use esp_idf_svc::mqtt::client::{EspMqttClient, MqttClientConfiguration};
