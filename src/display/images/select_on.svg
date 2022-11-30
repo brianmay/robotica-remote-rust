@@ -10,10 +10,11 @@
    class="h-6 w-6"
    fill="none"
    viewBox="0 0 24 24"
+   preserveAspectRatio="xMidYMid meet"
    stroke="currentColor"
    version="1.1"
    id="svg2212"
-   sodipodi:docname="wake_up_off.svg"
+   sodipodi:docname="wake_up_on.svg"
    inkscape:version="1.0.2 (e86c870879, 2021-01-15)">
   <metadata
      id="metadata2218">
@@ -23,7 +24,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title />
+        <dc:title></dc:title>
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -38,14 +39,14 @@
      guidetolerance="10"
      inkscape:pageopacity="0"
      inkscape:pageshadow="2"
-     inkscape:window-width="3834"
+     inkscape:window-width="1914"
      inkscape:window-height="2107"
      id="namedview2214"
      showgrid="false"
      inkscape:zoom="42"
      inkscape:cx="2.8333334"
      inkscape:cy="12"
-     inkscape:window-x="3840"
+     inkscape:window-x="1920"
      inkscape:window-y="22"
      inkscape:window-maximized="0"
      inkscape:current-layer="svg2212"
@@ -54,8 +55,7 @@
      stroke-linecap="round"
      stroke-linejoin="round"
      stroke-width="2"
-     d="m 16,16 v 1 c 0,1.656854 -1.343146,3 -3,3 H 6 C 4.3431458,20 3,18.656854 3,17 V 7 C 3,5.3431458 4.3431458,4 6,4 h 7 c 1.656854,0 3,1.3431458 3,3 v 1"
+     d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"
      id="path2210"
-     style="stroke:#ffffff;stroke-opacity:1"
-     sodipodi:nodetypes="cssssssssc" />
+     style="stroke:#000000;stroke-opacity:1" />
 </svg>

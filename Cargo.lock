@@ -1686,6 +1686,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "robotica-common"
+version = "0.1.0"
+source = "git+https://github.com/brianmay/robotica-rust.git#15251f31c0a31a0aba76d28e274a0fc47675f232"
+dependencies = [
+ "log",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
 name = "robotica-remote"
 version = "0.22.8"
 dependencies = [
@@ -1707,6 +1718,7 @@ dependencies = [
  "log",
  "mipidsi",
  "pretty_env_logger",
+ "robotica-common",
  "serde_json",
  "shared-bus",
  "smart-leds",

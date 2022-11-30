@@ -15,10 +15,10 @@ use embedded_graphics::{
     text::{Alignment, Text},
     Drawable,
 };
+use robotica_common::controllers::DisplayState;
 use tinytga::DynamicTga;
 
-use crate::button_controllers::{self, DisplayState, Icon};
-
+use super::icon::Icon;
 use super::DisplayCommand;
 
 pub trait FlushableDrawTarget: DrawTarget {
@@ -262,53 +262,77 @@ where
 }
 
 enum ImageCategory {
-    HardOff,
+    Error,
     On,
-    OnOther,
     Off,
+    AutoOff,
 }
 
 fn get_image_category(state: &DisplayState) -> ImageCategory {
     match state {
-        DisplayState::HardOff => ImageCategory::HardOff,
-        DisplayState::Error => ImageCategory::Off,
-        DisplayState::Unknown => ImageCategory::Off,
+        DisplayState::HardOff => ImageCategory::Error,
+        DisplayState::Error => ImageCategory::Error,
+        DisplayState::Unknown => ImageCategory::Error,
         DisplayState::On => ImageCategory::On,
         DisplayState::Off => ImageCategory::Off,
-        DisplayState::OnOther => ImageCategory::OnOther,
+        DisplayState::AutoOff => ImageCategory::AutoOff,
     }
 }
 
 fn get_image_data<T: PixelColor + From<Gray8> + From<Rgb555> + From<Rgb888>>(
     image: &ImageCategory,
-    icon: &button_controllers::Icon,
+    icon: &Icon,
 ) -> impl ImageDrawable<Color = T> {
     use ImageCategory::*;
 
     let data = match icon {
-        Icon::Light => match image {
-            HardOff => include_bytes!("images/light_hard_off_64x64.tga").as_slice(),
-            On => include_bytes!("images/light_on_64x64.tga").as_slice(),
-            Off => include_bytes!("images/light_off_64x64.tga").as_slice(),
-            OnOther => include_bytes!("images/light_on_other_64x64.tga").as_slice(),
-        },
         Icon::Fan => match image {
-            HardOff => include_bytes!("images/fan_hard_off_64x64.tga").as_slice(),
+            Error => include_bytes!("images/fan_error_64x64.tga").as_slice(),
             On => include_bytes!("images/fan_on_64x64.tga").as_slice(),
             Off => include_bytes!("images/fan_off_64x64.tga").as_slice(),
-            OnOther => include_bytes!("images/fan_on_other_64x64.tga").as_slice(),
+            AutoOff => include_bytes!("images/fan_auto_64x64.tga").as_slice(),
         },
-        Icon::WakeUp => match image {
-            HardOff => include_bytes!("images/wake_up_hard_off_64x64.tga").as_slice(),
-            On => include_bytes!("images/wake_up_on_64x64.tga").as_slice(),
-            Off => include_bytes!("images/wake_up_off_64x64.tga").as_slice(),
-            OnOther => include_bytes!("images/wake_up_on_other_64x64.tga").as_slice(),
+        Icon::Light => match image {
+            Error => include_bytes!("images/light_error_64x64.tga").as_slice(),
+            On => include_bytes!("images/light_on_64x64.tga").as_slice(),
+            Off => include_bytes!("images/light_off_64x64.tga").as_slice(),
+            AutoOff => include_bytes!("images/light_auto_64x64.tga").as_slice(),
+        },
+        Icon::Night => match image {
+            Error => include_bytes!("images/night_error_64x64.tga").as_slice(),
+            On => include_bytes!("images/night_on_64x64.tga").as_slice(),
+            Off => include_bytes!("images/night_off_64x64.tga").as_slice(),
+            AutoOff => include_bytes!("images/night_auto_64x64.tga").as_slice(),
+        },
+        Icon::Schedule => match image {
+            Error => include_bytes!("images/schedule_error_64x64.tga").as_slice(),
+            On => include_bytes!("images/schedule_on_64x64.tga").as_slice(),
+            Off => include_bytes!("images/schedule_off_64x64.tga").as_slice(),
+            AutoOff => include_bytes!("images/schedule_auto_64x64.tga").as_slice(),
+        },
+        Icon::Select => match image {
+            Error => include_bytes!("images/select_error_64x64.tga").as_slice(),
+            On => include_bytes!("images/select_on_64x64.tga").as_slice(),
+            Off => include_bytes!("images/select_off_64x64.tga").as_slice(),
+            AutoOff => include_bytes!("images/select_auto_64x64.tga").as_slice(),
+        },
+        Icon::Speaker => match image {
+            Error => include_bytes!("images/speaker_error_64x64.tga").as_slice(),
+            On => include_bytes!("images/speaker_on_64x64.tga").as_slice(),
+            Off => include_bytes!("images/speaker_off_64x64.tga").as_slice(),
+            AutoOff => include_bytes!("images/speaker_auto_64x64.tga").as_slice(),
+        },
+        Icon::Trumpet => match image {
+            Error => include_bytes!("images/trumpet_error_64x64.tga").as_slice(),
+            On => include_bytes!("images/trumpet_on_64x64.tga").as_slice(),
+            Off => include_bytes!("images/trumpet_off_64x64.tga").as_slice(),
+            AutoOff => include_bytes!("images/trumpet_auto_64x64.tga").as_slice(),
         },
         Icon::TV => match image {
-            HardOff => include_bytes!("images/tv_hard_off_64x64.tga").as_slice(),
+            Error => include_bytes!("images/tv_error_64x64.tga").as_slice(),
             On => include_bytes!("images/tv_on_64x64.tga").as_slice(),
             Off => include_bytes!("images/tv_off_64x64.tga").as_slice(),
-            OnOther => include_bytes!("images/tv_on_other_64x64.tga").as_slice(),
+            AutoOff => include_bytes!("images/tv_auto_64x64.tga").as_slice(),
         },
     };
 
@@ -342,10 +366,10 @@ where
     let text = match state {
         DisplayState::HardOff => "Hard off",
         DisplayState::Error => "Error",
-        DisplayState::Unknown => "Lost",
+        DisplayState::Unknown => "?",
         DisplayState::On => "On",
         DisplayState::Off => "Off",
-        DisplayState::OnOther => "Other",
+        DisplayState::AutoOff => "Auto Off",
     };
 
     if matches!(state, DisplayState::Error | DisplayState::Unknown) {

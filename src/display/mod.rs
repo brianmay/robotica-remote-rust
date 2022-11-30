@@ -1,4 +1,6 @@
-use crate::button_controllers;
+use robotica_common::controllers::DisplayState;
+
+use self::icon::Icon;
 
 #[cfg(feature = "lca2021_badge")]
 pub mod lca2021_badge;
@@ -15,15 +17,12 @@ pub mod graphics;
 #[cfg(feature = "makerfab")]
 pub mod graphics;
 
+pub mod icon;
+
 #[derive(Debug)]
 pub enum DisplayCommand {
     Started,
-    DisplayState(
-        button_controllers::DisplayState,
-        button_controllers::Icon,
-        usize,
-        String,
-    ),
+    DisplayState(DisplayState, Icon, usize, String),
     DisplayNone(usize),
     BlankAll,
     UnBlankAll,

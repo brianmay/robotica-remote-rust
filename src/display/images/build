@@ -1,7 +1,7 @@
 #!/bin/sh
 set -ex
 
-cd src/display/images
+cd "$(dirname "$0")"
 
 do_image() {
     image="$1"
@@ -12,12 +12,16 @@ do_image() {
 do_images() {
     prefix="$1"
     do_image "$prefix"_off black
-    do_image "$prefix"_hard_off black
+    do_image "$prefix"_error black
     do_image "$prefix"_on white
-    do_image "$prefix"_on_other black
+    do_image "$prefix"_auto white
 }
 
-do_images light
 do_images fan
-do_images wake_up
+do_images light
+do_images night
+do_images schedule
+do_images select
+do_images speaker
+do_images trumpet
 do_images tv

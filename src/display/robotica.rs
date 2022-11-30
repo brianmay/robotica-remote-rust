@@ -2,6 +2,7 @@ use std::sync::mpsc;
 use std::thread;
 
 use anyhow::Result;
+use robotica_common::controllers::DisplayState;
 use smart_leds::RGB;
 use smart_leds_trait::SmartLedsWrite;
 use ws2812_esp32_rmt_driver::Ws2812Esp32Rmt;
@@ -31,12 +32,12 @@ fn display_thread(mut leds: Ws2812Esp32Rmt, rx: mpsc::Receiver<DisplayCommand>) 
                 };
 
                 let color = match state {
-                    crate::button_controllers::DisplayState::HardOff => (0, 0, 0),
-                    crate::button_controllers::DisplayState::Error => (1, 0, 0),
-                    crate::button_controllers::DisplayState::Unknown => (1, 0, 0),
-                    crate::button_controllers::DisplayState::On => (0, 1, 0),
-                    crate::button_controllers::DisplayState::Off => (0, 0, 1),
-                    crate::button_controllers::DisplayState::OnOther => (0, 1, 1),
+                    DisplayState::HardOff => (0, 0, 0),
+                    DisplayState::Error => (1, 0, 0),
+                    DisplayState::Unknown => (1, 0, 0),
+                    DisplayState::On => (0, 1, 0),
+                    DisplayState::Off => (0, 0, 1),
+                    DisplayState::AutoOff => (0, 1, 1),
                 };
 
                 let color = RGB::from(color);

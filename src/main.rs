@@ -7,9 +7,9 @@ use std::sync::mpsc;
 use anyhow::Result;
 use boards::Board;
 use boards::NUM_CONTROLLERS_PER_PAGE;
+use config::Controller;
 use embedded_svc::timer::OnceTimer;
 use embedded_svc::timer::Timer;
-// use embedded_svc::timer::TimerService;
 use esp_idf_svc::timer::EspTimer;
 use esp_idf_svc::timer::EspTimerService;
 use log::*;
@@ -18,8 +18,7 @@ mod button;
 use button::ButtonId;
 use mqtt::Subscriptions;
 use pretty_env_logger::env_logger::WriteStyle;
-
-mod button_controllers;
+use robotica_common::controllers::DisplayState;
 
 mod display;
 use crate::display::DisplayCommand;
@@ -79,25 +78,25 @@ impl RequestedDisplayStatus {
 fn update_display(
     display: &mpsc::Sender<DisplayCommand>,
     id_in_page: usize,
-    controller: &dyn button_controllers::Controller,
-    state: button_controllers::DisplayState,
+    controller: &Controller,
+    state: DisplayState,
 ) {
+    let name = controller.get_name().to_string();
     let icon = controller.get_icon();
-    let name = controller.get_name();
     let message = DisplayCommand::DisplayState(state, icon, id_in_page, name);
     display.send(message).unwrap();
 }
 
 fn update_displays(
     display: &mpsc::Sender<DisplayCommand>,
-    controllers: &[Box<dyn button_controllers::Controller>],
+    controllers: &[Controller],
     page_num: usize,
 ) {
     let controllers = get_controllers_per_page(controllers, page_num);
     for (id_in_page, controller) in controllers.iter().enumerate() {
         if let Some(controller) = controller {
             let state = controller.get_display_state();
-            update_display(display, id_in_page, *controller, state);
+            update_display(display, id_in_page, controller, state);
         } else {
             let message = DisplayCommand::DisplayNone(id_in_page);
             display.send(message).unwrap();
@@ -154,18 +153,14 @@ fn do_blank(
     };
 }
 
-fn button_press(
-    controllers: &mut [Box<dyn button_controllers::Controller>],
-    id: usize,
-    mqtt: &mqtt::Mqtt,
-) {
+fn button_press(controllers: &mut [Controller], id: usize, mqtt: &mqtt::Mqtt) {
     info!("Got button {} press", id);
     let controller_or_none = controllers.get_mut(id as usize);
     if let Some(controller) = controller_or_none {
         let commands = controller.get_press_commands();
         for command in commands {
-            let topic = command.get_topic();
-            let data = command.get_message();
+            let topic = &command.topic;
+            let data = command.payload;
             info!("Send {}: {}", topic, data);
             mqtt.publish(topic, false, &data);
         }
@@ -180,10 +175,7 @@ fn get_controller_range_for_page(page: usize) -> Range<usize> {
     Range { start, end }
 }
 
-fn get_controllers_per_page(
-    controllers: &[Box<dyn button_controllers::Controller>],
-    page: usize,
-) -> Vec<Option<&dyn button_controllers::Controller>> {
+fn get_controllers_per_page(controllers: &[Controller], page: usize) -> Vec<Option<&Controller>> {
     let mut range = get_controller_range_for_page(page);
     let len = controllers.len();
 
@@ -193,7 +185,7 @@ fn get_controllers_per_page(
     let controllers = &controllers[range];
     let len = controllers.len();
 
-    let mut output: Vec<_> = controllers.iter().map(|x| Some(x.as_ref())).collect();
+    let mut output: Vec<_> = controllers.iter().map(Some).collect();
     output.extend((len..NUM_CONTROLLERS_PER_PAGE).map(|_| None));
 
     output
@@ -209,7 +201,7 @@ fn page_to_controller_id(page_num: usize, id_in_page: usize) -> usize {
     page_num * NUM_CONTROLLERS_PER_PAGE + id_in_page
 }
 
-fn get_num_pages(controllers: &[Box<dyn button_controllers::Controller>]) -> usize {
+fn get_num_pages(controllers: &[Controller]) -> usize {
     let len = controllers.len();
     let num = NUM_CONTROLLERS_PER_PAGE;
     len / num + usize::from(len % num != 0)
@@ -226,10 +218,7 @@ fn main() -> Result<()> {
     let board = boards::configure_devices(tx.clone())?;
     let display = board.get_display();
 
-    let config_list = config::get_controllers_config();
-
-    let mut controllers: Vec<Box<dyn button_controllers::Controller>> =
-        config_list.iter().map(|x| x.create_controller()).collect();
+    let mut controllers = config::get_controllers_config();
 
     let subscriptions = {
         let mut subscriptions = Subscriptions::new();
@@ -323,7 +312,7 @@ fn main() -> Result<()> {
 
                 let (msg_page_num, id_in_page) = controller_to_page_id(id);
                 if page_num == msg_page_num && old_state != state {
-                    update_display(&display, id_in_page, controller.as_ref(), state);
+                    update_display(&display, id_in_page, controller, state);
                 }
             }
             Message::MqttConnect => {
