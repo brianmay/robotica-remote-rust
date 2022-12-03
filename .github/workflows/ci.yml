@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Install libncurses
-        run: sudo apt-get install -y libncurses-dev
+        run: sudo apt-get install -y libncurses5
       - name: Setup | Checkout
         uses: actions/checkout@v3
       - name: Setup | Rust
