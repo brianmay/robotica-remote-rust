@@ -1669,7 +1669,7 @@ dependencies = [
 [[package]]
 name = "robotica-common"
 version = "0.1.0"
-source = "git+https://github.com/brianmay/robotica-rust.git#dd7e8155b0dd39687c206937760c2d5f0f94ba50"
+source = "git+https://github.com/brianmay/robotica-rust.git#83785f60e2fbd5d06ff045224427962ab2fcd64c"
 dependencies = [
  "log",
  "serde",
