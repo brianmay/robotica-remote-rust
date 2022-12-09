@@ -793,6 +793,20 @@ dependencies = [
  "tempfile",
  "thiserror",
  "which",
+]
+
+[[package]]
+name = "embuild"
+version = "0.31.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "65388407a519276cd9aa94291380649d4cedbe8cf566d40f436f7a1ea9b5f8fe"
+dependencies = [
+ "anyhow",
+ "bitflags",
+ "filetime",
+ "log",
+ "shlex",
+ "thiserror",
  "xmas-elf",
 ]
 
@@ -865,7 +879,7 @@ dependencies = [
  "embedded-hal 0.2.7",
  "embedded-hal 1.0.0-alpha.9",
  "embedded-hal-nb",
- "embuild",
+ "embuild 0.30.5",
  "esp-idf-sys",
  "heapless",
  "nb 1.0.0",
@@ -880,7 +894,7 @@ dependencies = [
  "anyhow",
  "cstr_core",
  "embedded-svc",
- "embuild",
+ "embuild 0.30.5",
  "enumset",
  "esp-idf-hal",
  "esp-idf-sys",
@@ -900,7 +914,7 @@ dependencies = [
  "build-time",
  "cargo_metadata",
  "const_format",
- "embuild",
+ "embuild 0.30.5",
  "envy",
  "libc",
  "regex",
@@ -1689,7 +1703,7 @@ dependencies = [
  "embedded-graphics-framebuf",
  "embedded-hal 1.0.0-alpha.9",
  "embedded-svc",
- "embuild",
+ "embuild 0.31.0",
  "esp-idf-hal",
  "esp-idf-svc",
  "esp-idf-sys",
@@ -2359,7 +2373,7 @@ checksum = "da336bcb91afc05f7e175c3fbf52c99a8ddef5a998f8d41149556cf2872daf5f"
 dependencies = [
  "anyhow",
  "embedded-graphics-core",
- "embuild",
+ "embuild 0.30.5",
  "esp-idf-sys",
  "once_cell",
  "smart-leds-trait",
