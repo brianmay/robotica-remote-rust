@@ -27,7 +27,7 @@ debug = true    # Symbols are nice and they don't increase the size on Flash
 opt-level = "z"
 
 [features]
-default = ["native", "makerfab"]
+default = ["native", "lca2021_badge"]
 
 # Enable this feature for the build to use ESP-IDF native tooling instead of PlatformIO under the hood
 native = ["esp-idf-sys/native"]
@@ -49,10 +49,10 @@ anyhow = { version = "1", features = ["backtrace"] }
 heapless = "0.7.16"
 log = "0.4"
 url = "2"
-esp-idf-sys = { version = "0.31.12", features = ["binstart"] }
-esp-idf-svc = { version = "0.43.5", features = ["experimental"] }
-esp-idf-hal = { version = "0.39.4" }
-embedded-svc = "0.23.2"
+esp-idf-sys = { version = "0.32.1", features = ["binstart"] }
+esp-idf-svc = { version = "0.45.0", features = ["experimental"] }
+esp-idf-hal = { version = "0.40.1" }
+embedded-svc = "0.24.0"
 embedded-hal = "=1.0.0-alpha.9"
 embedded-graphics = "0.7.1"
 display-interface = { version = "0.4", optional = true }
