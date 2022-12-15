@@ -155,7 +155,7 @@ fn do_blank(
 
 fn button_press(controllers: &mut [Controller], id: usize, mqtt: &mqtt::Mqtt) {
     info!("Got button {} press", id);
-    let controller_or_none = controllers.get_mut(id as usize);
+    let controller_or_none = controllers.get_mut(id);
     if let Some(controller) = controller_or_none {
         let commands = controller.get_press_commands();
         for command in commands {
@@ -304,7 +304,7 @@ fn main() -> Result<()> {
             }
             Message::MqttReceived(topic, data, mqtt::Label::Button(id, sid)) => {
                 info!("Got message for button {id}/{sid}: {} - {}", topic, data);
-                let controller = controllers.get_mut(id as usize).unwrap();
+                let controller = controllers.get_mut(id).unwrap();
                 let old_state = controller.get_display_state();
                 controller.process_message(sid, data);
                 let state = controller.get_display_state();
