@@ -18,7 +18,7 @@ impl<T: gpio::InputPin> InputPinNotify for PinDriver<'_, T, Input> {
 
         let subscription = notify
             .subscribe(move |v| {
-                println!("Pin {} changed to {}", pin_number, v);
+                println!("Pin {pin_number} changed to {v}");
                 let v: Value = if *v != 0 { Value::High } else { Value::Low };
                 callback(v);
             })

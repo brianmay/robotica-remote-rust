@@ -55,13 +55,13 @@ enum MqttCommand {
 fn event_to_string(event: &Event<MessageImpl>) -> String {
     match event {
         Event::BeforeConnect => "BeforeConnect".to_string(),
-        Event::Connected(connected) => format!("Connected(connected: {})", connected),
+        Event::Connected(connected) => format!("Connected(connected: {connected})"),
         Event::Disconnected => "Disconnected".to_string(),
-        Event::Subscribed(message_id) => format!("Subscribed({})", message_id),
-        Event::Unsubscribed(message_id) => format!("Unsubscribed({})", message_id),
-        Event::Published(message_id) => format!("Published({})", message_id),
+        Event::Subscribed(message_id) => format!("Subscribed({message_id})"),
+        Event::Unsubscribed(message_id) => format!("Unsubscribed({message_id})"),
+        Event::Published(message_id) => format!("Published({message_id})"),
         Event::Received(message) => format!("Received({})", message.id()),
-        Event::Deleted(message_id) => format!("Deleted({})", message_id),
+        Event::Deleted(message_id) => format!("Deleted({message_id})"),
     }
 }
 
