@@ -405,7 +405,7 @@ version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6fac387a98bb7c37292057cffc56d62ecb629900026402633ae9160df93a8766"
 dependencies = [
- "nom 7.1.1",
+ "nom",
 ]
 
 [[package]]
@@ -660,7 +660,20 @@ source = "git+https://github.com/embedded-graphics/embedded-graphics?branch=mast
 dependencies = [
  "az",
  "byteorder",
- "embedded-graphics-core",
+ "embedded-graphics-core 0.3.3",
+ "float-cmp",
+ "micromath",
+]
+
+[[package]]
+name = "embedded-graphics"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cd2a8e0250a7e1212828166b01eed0219e488ebb2599f44624a29c9bd249f397"
+dependencies = [
+ "az",
+ "byteorder",
+ "embedded-graphics-core 0.4.0",
  "float-cmp",
  "micromath",
 ]
@@ -675,13 +688,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "embedded-graphics-core"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ba9ecd261f991856250d2207f6d8376946cd9f412a2165d3b75bc87a0bc7a044"
+dependencies = [
+ "az",
+ "byteorder",
+]
+
+[[package]]
 name = "embedded-graphics-framebuf"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "03f348b2818ebb88be69cc505ee78c0d39e078ef608f8eea41eb90575435b375"
 dependencies = [
  "embedded-dma",
- "embedded-graphics",
+ "embedded-graphics 0.7.1",
 ]
 
 [[package]]
@@ -1288,7 +1311,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "187aa4e418283ff1186bc471cb3a20bab339ee8f25882bdb7465ae44bd971c95"
 dependencies = [
  "display-interface",
- "embedded-graphics-core",
+ "embedded-graphics-core 0.3.3",
  "embedded-hal 0.2.7",
  "heapless",
  "nb 1.0.0",
@@ -1328,16 +1351,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1bcece43b12349917e096cddfa66107277f123e6c96a5aea78711dc601a47152"
 dependencies = [
  "serde",
-]
-
-[[package]]
-name = "nom"
-version = "6.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e7413f999671bd4745a7b624bd370a569fb6bc574b23c83a3c5ed2e453f3d5e2"
-dependencies = [
- "memchr",
- "version_check",
 ]
 
 [[package]]
@@ -1637,7 +1650,7 @@ dependencies = [
  "arr_macro",
  "display-interface",
  "display-interface-spi",
- "embedded-graphics",
+ "embedded-graphics 0.7.1",
  "embedded-graphics-framebuf",
  "embedded-hal 1.0.0-alpha.9",
  "embedded-svc",
@@ -1889,7 +1902,7 @@ dependencies = [
  "display-interface",
  "display-interface-i2c",
  "display-interface-spi",
- "embedded-graphics-core",
+ "embedded-graphics-core 0.3.3",
  "embedded-hal 0.2.7",
 ]
 
@@ -2025,12 +2038,12 @@ dependencies = [
 
 [[package]]
 name = "tinytga"
-version = "0.4.1"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "756dcc0078b35e5f8ab052f19a48225821fd046011342d31deef6b8d5c825d2b"
+checksum = "477839bd612acb4d0551915eaf6eef8cc1b3a9dd58e18e9c2b746c78614a25d5"
 dependencies = [
- "embedded-graphics",
- "nom 6.1.2",
+ "embedded-graphics 0.8.0",
+ "nom",
 ]
 
 [[package]]
@@ -2479,7 +2492,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d1208b7e7067a133ef425eb51fc914cdc653899bfbe6c2dabe3c2babf387db71"
 dependencies = [
  "anyhow",
- "embedded-graphics-core",
+ "embedded-graphics-core 0.3.3",
  "embuild 0.30.5",
  "esp-idf-sys",
  "once_cell",
