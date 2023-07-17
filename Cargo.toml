@@ -74,7 +74,7 @@ smart-leds-trait = { version = "0", optional = true }
 ws2812-esp32-rmt-driver = { version = "0.5.0", optional = true }
 hex = "0.4.3"
 ft6x36 = { version = "0.4.0", optional = true }
-embedded-graphics-framebuf = "0.2.0"
+embedded-graphics-framebuf = "0.5.0"
 robotica-common = { git = "https://github.com/brianmay/robotica-rust.git" }
 # robotica-common = { path = "/home/brian/tree/personal/robotica-node-rust/robotica-common" }
 
