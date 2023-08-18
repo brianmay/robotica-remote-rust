@@ -660,7 +660,7 @@ source = "git+https://github.com/embedded-graphics/embedded-graphics?branch=mast
 dependencies = [
  "az",
  "byteorder",
- "embedded-graphics-core",
+ "embedded-graphics-core 0.3.3",
  "float-cmp",
  "micromath",
 ]
@@ -669,6 +669,16 @@ dependencies = [
 name = "embedded-graphics-core"
 version = "0.3.3"
 source = "git+https://github.com/embedded-graphics/embedded-graphics?branch=master#14434ceadcb774e5ff70a831370885e9b913c6bc"
+dependencies = [
+ "az",
+ "byteorder",
+]
+
+[[package]]
+name = "embedded-graphics-core"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ba9ecd261f991856250d2207f6d8376946cd9f412a2165d3b75bc87a0bc7a044"
 dependencies = [
  "az",
  "byteorder",
@@ -1288,7 +1298,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "187aa4e418283ff1186bc471cb3a20bab339ee8f25882bdb7465ae44bd971c95"
 dependencies = [
  "display-interface",
- "embedded-graphics-core",
+ "embedded-graphics-core 0.3.3",
  "embedded-hal 0.2.7",
  "heapless",
  "nb 1.0.0",
@@ -1882,14 +1892,14 @@ dependencies = [
 
 [[package]]
 name = "ssd1306"
-version = "0.7.1"
+version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f066d5458b0a27d938dd2b71a8b397d88c5776cb316b8a39f19ef49b6d290709"
+checksum = "5eff5d3218556bd92f998fce3f47dac6fc326bd416eae279d6e6e92d9b4d0d5d"
 dependencies = [
  "display-interface",
  "display-interface-i2c",
  "display-interface-spi",
- "embedded-graphics-core",
+ "embedded-graphics-core 0.4.0",
  "embedded-hal 0.2.7",
 ]
 
@@ -2479,7 +2489,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d1208b7e7067a133ef425eb51fc914cdc653899bfbe6c2dabe3c2babf387db71"
 dependencies = [
  "anyhow",
- "embedded-graphics-core",
+ "embedded-graphics-core 0.3.3",
  "embuild 0.30.5",
  "esp-idf-sys",
  "once_cell",
